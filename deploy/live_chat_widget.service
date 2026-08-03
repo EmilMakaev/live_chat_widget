@@ -1,0 +1,32 @@
+[Unit]
+Description=Live Chat Widget (Phoenix release)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=exec
+User=live_chat_widget
+Group=live_chat_widget
+WorkingDirectory=/opt/live_chat_widget/current
+EnvironmentFile=/etc/live_chat_widget/live_chat_widget.env
+ExecStart=/opt/live_chat_widget/current/bin/server
+ExecStop=/opt/live_chat_widget/current/bin/live_chat_widget stop
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=65536
+
+# --- Hardening: restrict what the process can touch, even if compromised ---
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/live_chat_widget
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

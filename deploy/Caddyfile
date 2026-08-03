@@ -1,0 +1,15 @@
+# Reverse proxy + automatic HTTPS (Let's Encrypt) for the app.
+# Replace the domain below, then: sudo cp Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy
+
+chat.example.com {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:4000
+
+	# Optional but recommended: basic security headers.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+}

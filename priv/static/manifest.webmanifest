@@ -1,0 +1,16 @@
+{
+  "name": "Live Chat Widget — Панель оператора",
+  "short_name": "Chat Panel",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "/images/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
