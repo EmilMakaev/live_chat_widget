@@ -122,9 +122,13 @@ defmodule LiveChatWidget.Chat do
 
     Repo.transaction(fn ->
       with {:ok, message} <-
-             insert_message(conversation, Map.merge(%{direction: :outbound, sender_type: :operator}, attrs)),
+             insert_message(
+               conversation,
+               Map.merge(%{direction: :outbound, sender_type: :operator}, attrs)
+             ),
            {:ok, conversation} <- touch_conversation(conversation),
-           {:ok, conversation} <- maybe_claim(conversation, attrs[:sender_user_id], source_channel_id) do
+           {:ok, conversation} <-
+             maybe_claim(conversation, attrs[:sender_user_id], source_channel_id) do
         dispatch_to_channels(conversation, message, exclude_channel_id: source_channel_id)
         message
       else
@@ -148,9 +152,15 @@ defmodule LiveChatWidget.Chat do
 
   defp notify_other_channels_claimed(conversation, source_channel_id) do
     site = Accounts.get_site!(conversation.site_id)
-    operator_label = if conversation.claimed_by_user_id, do: "оператором", else: "другим оператором"
 
-    for channel <- Accounts.active_channels(site.account_id, department: conversation.department, only_user_id: nil),
+    operator_label =
+      if conversation.claimed_by_user_id, do: "оператором", else: "другим оператором"
+
+    for channel <-
+          Accounts.active_channels(site.account_id,
+            department: conversation.department,
+            only_user_id: nil
+          ),
         channel.id != source_channel_id,
         channel.user_id != conversation.claimed_by_user_id do
       {:ok, notice} =
@@ -233,7 +243,8 @@ defmodule LiveChatWidget.Chat do
     MessengerMessageRef
     |> where(
       [r],
-      r.messenger_channel_id == ^channel_id and r.external_message_id == ^to_string(external_message_id)
+      r.messenger_channel_id == ^channel_id and
+        r.external_message_id == ^to_string(external_message_id)
     )
     |> preload(:conversation)
     |> Repo.one()

@@ -16,7 +16,9 @@ defmodule LiveChatWidget.Workers.MessengerDispatchWorker do
   alias LiveChatWidget.Messengers.Registry
 
   @impl true
-  def perform(%Oban.Job{args: %{"message_id" => message_id, "messenger_channel_id" => channel_id}}) do
+  def perform(%Oban.Job{
+        args: %{"message_id" => message_id, "messenger_channel_id" => channel_id}
+      }) do
     message = Repo.get!(Message, message_id)
     channel = Accounts.get_messenger_channel!(channel_id)
     adapter = Registry.adapter_for(channel.type)

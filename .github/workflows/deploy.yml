@@ -1,0 +1,84 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least-privilege default: this workflow doesn't need to write anything
+# to the repo (no PR comments, no releases), so GITHUB_TOKEN stays read-only.
+permissions:
+  contents: read
+
+# If two pushes to main land close together, queue the second deploy
+# instead of running two `deploy.sh` in parallel on the same server.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pin to the same OTP/Elixir you developed against (see `elixir
+      # --version` locally). If setup-beam rejects the version as unknown,
+      # check https://github.com/erlef/setup-beam for currently published
+      # versions and bump both here and in your local toolchain together.
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "29.0"
+          elixir-version: "1.20.2"
+
+      - name: Cache deps + _build
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-${{ hashFiles('mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-
+
+      - run: mix deps.get
+      - run: mix compile --warnings-as-errors
+      - run: mix format --check-formatted
+      - run: mix test
+        env:
+          MIX_ENV: test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production # requires manual approval if you set that up — see DEPLOY.md
+
+    steps:
+      - name: Configure SSH
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+
+      - name: Deploy
+        run: |
+          ssh -i ~/.ssh/deploy_key -o UserKnownHostsFile=~/.ssh/known_hosts \
+            -o StrictHostKeyChecking=yes \
+            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "deploy"
+        # The remote command above is irrelevant — the deploy user's
+        # authorized_keys entry forces `deploy.sh` to run no matter what
+        # command is requested. See DEPLOY.md "CI/CD" section.

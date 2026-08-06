@@ -16,7 +16,8 @@ defmodule LiveChatWidgetWeb.WidgetChannel do
   def join("widget:" <> site_token, %{"visitor_token" => visitor_token} = params, socket)
       when is_binary(visitor_token) and byte_size(visitor_token) in 8..128 do
     with %{} = site <- Accounts.get_site_by_token(site_token) || {:error, :unknown_site},
-         {:ok, visitor} <- fetch_or_create_visitor(site, visitor_token, params, socket.assigns.peer_ip),
+         {:ok, visitor} <-
+           fetch_or_create_visitor(site, visitor_token, params, socket.assigns.peer_ip),
          {:ok, conversation} <- Chat.ensure_conversation(visitor) do
       PubSub.subscribe(PubSub.conversation_topic(conversation.id))
 

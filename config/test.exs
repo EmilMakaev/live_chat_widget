@@ -26,6 +26,11 @@ config :live_chat_widget, LiveChatWidgetWeb.Endpoint,
 # In test we don't send emails
 config :live_chat_widget, LiveChatWidget.Mailer, adapter: Swoosh.Adapters.Test
 
+# Oban's real queues/plugins/peer election need a live DB connection outside
+# any test's sandbox transaction — `:manual` disables all of that so tests
+# control job execution explicitly (Oban.Testing / Oban.drain_queue).
+config :live_chat_widget, Oban, testing: :manual
+
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false
 

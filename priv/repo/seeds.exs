@@ -43,7 +43,9 @@ site =
       site
 
     [] ->
-      {:ok, site} = Accounts.create_site(account, %{"name" => "Demo Site", "domain" => "localhost"})
+      {:ok, site} =
+        Accounts.create_site(account, %{"name" => "Demo Site", "domain" => "localhost"})
+
       site
   end
 

@@ -5,6 +5,7 @@ defmodule LiveChatWidget.Repo.Migrations.CreateMessengerMessageRefs do
     create table(:messenger_message_refs) do
       add :message_id, references(:messages, on_delete: :delete_all), null: false
       add :conversation_id, references(:conversations, on_delete: :delete_all), null: false
+
       add :messenger_channel_id, references(:messenger_channels, on_delete: :delete_all),
         null: false
 

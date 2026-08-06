@@ -61,7 +61,11 @@ defmodule LiveChatWidgetWeb.OperatorLive.Dashboard do
             </span>
           </div>
 
-          <div class="flex-1 overflow-y-auto px-4 py-4 space-y-2 bg-gray-50" id="messages" phx-update="stream">
+          <div
+            class="flex-1 overflow-y-auto px-4 py-4 space-y-2 bg-gray-50"
+            id="messages"
+            phx-update="stream"
+          >
             <div
               :for={{dom_id, m} <- @streams.messages}
               id={dom_id}
@@ -71,7 +75,11 @@ defmodule LiveChatWidgetWeb.OperatorLive.Dashboard do
             </div>
           </div>
 
-          <form phx-submit="send_reply" class="p-3 border-t border-gray-200 flex gap-2" id="reply-form">
+          <form
+            phx-submit="send_reply"
+            class="p-3 border-t border-gray-200 flex gap-2"
+            id="reply-form"
+          >
             <input
               type="text"
               name="body"

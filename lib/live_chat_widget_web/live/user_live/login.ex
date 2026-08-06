@@ -129,6 +129,7 @@ defmodule LiveChatWidgetWeb.UserLive.Login do
   end
 
   defp local_mail_adapter? do
-    Application.get_env(:live_chat_widget, LiveChatWidget.Mailer)[:adapter] == Swoosh.Adapters.Local
+    Application.get_env(:live_chat_widget, LiveChatWidget.Mailer)[:adapter] ==
+      Swoosh.Adapters.Local
   end
 end

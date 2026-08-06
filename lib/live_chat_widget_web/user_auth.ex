@@ -257,6 +257,13 @@ defmodule LiveChatWidgetWeb.UserAuth do
   end
 
   @doc "Returns the path to redirect to after log in."
+  # Already logged in and logging in again only happens for sudo-mode
+  # reauth (confirming your password before a sensitive settings change),
+  # so send them back to settings rather than the inbox.
+  def signed_in_path(%Plug.Conn{assigns: %{current_scope: %Scope{user: %Identity.User{}}}}) do
+    ~p"/users/settings"
+  end
+
   def signed_in_path(_conn_or_socket), do: ~p"/dashboard"
 
   @doc """

@@ -35,7 +35,8 @@ defmodule LiveChatWidgetWeb.TelegramWebhookController do
         """)
 
       channel ->
-        {:ok, channel} = Accounts.bind_messenger_channel(channel, %{external_id: event.external_id})
+        {:ok, channel} =
+          Accounts.bind_messenger_channel(channel, %{external_id: event.external_id})
 
         Telegram.send_message(
           channel,
@@ -50,7 +51,10 @@ defmodule LiveChatWidgetWeb.TelegramWebhookController do
         :ignore
 
       channel ->
-        case Chat.find_conversation_by_channel_reply(channel.id, event.reply_to_external_message_id) do
+        case Chat.find_conversation_by_channel_reply(
+               channel.id,
+               event.reply_to_external_message_id
+             ) do
           nil ->
             Telegram.send_message(
               channel,

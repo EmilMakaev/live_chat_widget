@@ -21,7 +21,9 @@ defmodule Mix.Tasks.Chat.ConnectTelegram do
 
     with %{} = user <- Identity.get_user_by_email(email) || {:error, :no_such_user},
          [account | _] <- Accounts.list_accounts_for_user(user.id) do
-      {:ok, channel} = Accounts.initiate_messenger_connection(account, %{"type" => "telegram"}, user)
+      {:ok, channel} =
+        Accounts.initiate_messenger_connection(account, %{"type" => "telegram"}, user)
+
       bot_username = telegram_username()
 
       Mix.shell().info("""

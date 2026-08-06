@@ -15,7 +15,12 @@ defmodule LiveChatWidget.Chat.MessengerMessageRef do
   def changeset(ref, attrs) do
     ref
     |> cast(attrs, [:external_message_id, :message_id, :conversation_id, :messenger_channel_id])
-    |> validate_required([:external_message_id, :message_id, :conversation_id, :messenger_channel_id])
+    |> validate_required([
+      :external_message_id,
+      :message_id,
+      :conversation_id,
+      :messenger_channel_id
+    ])
     |> unique_constraint([:messenger_channel_id, :external_message_id])
   end
 end
