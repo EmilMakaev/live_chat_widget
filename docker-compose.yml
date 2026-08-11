@@ -1,15 +1,40 @@
-# Production compose file — runs on the VDS. Postgres and Caddy stay as
-# native systemd services on the host (simpler backups, no volume juggling
-# for the DB); only the app itself is containerized.
+# Production compose file — runs on the VDS. Caddy stays a native systemd
+# service on the host (it's just a reverse proxy, nothing to containerize);
+# the app and Postgres both run here, on their own internal network.
 #
-# network_mode: host means the container shares the host's network stack —
-# DATABASE_URL=...@localhost/... and Caddy's reverse_proxy 127.0.0.1:4000
-# keep working unchanged, no Docker network/port-mapping config needed.
+# `db` publishes no port at all — it's reachable only from `app`, on the
+# `internal` network Docker creates for this compose file. Tighter than the
+# previous setup (native Postgres on 127.0.0.1, reachable by any process on
+# the host); now nothing on the host itself can reach it, only this compose
+# project's containers.
 
 services:
+  db:
+    image: postgres:16
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: live_chat_widget_prod
+      POSTGRES_USER: live_chat_widget
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U live_chat_widget"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: journald
+      options:
+        tag: live_chat_widget_db
+
   app:
     image: ${IMAGE:-ghcr.io/emilmakaev/live_chat_widget:latest}
-    network_mode: host
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:4000:4000" # Caddy on the host reverse-proxies to this
     env_file:
       - /etc/live_chat_widget/live_chat_widget.env
     restart: unless-stopped
@@ -17,3 +42,6 @@ services:
       driver: journald
       options:
         tag: live_chat_widget
+
+volumes:
+  pgdata:

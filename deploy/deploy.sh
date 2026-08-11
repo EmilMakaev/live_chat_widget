@@ -13,6 +13,13 @@ set -euo pipefail
 SRC_DIR="/opt/live_chat_widget/src"
 cd "$SRC_DIR"
 
+# docker-compose.yml's ${POSTGRES_PASSWORD} is substituted from *this
+# shell's* environment, not from the app container's env_file: — same
+# secrets file, two different consumption paths.
+set -a
+source /etc/live_chat_widget/live_chat_widget.env
+set +a
+
 echo "==> Pulling latest docker-compose.yml / Caddyfile / migration files"
 git pull --ff-only
 

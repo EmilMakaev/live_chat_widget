@@ -44,9 +44,10 @@ cd /tmp/live_chat_widget
 sudo bash deploy/setup_server.sh
 ```
 
-Скрипт ставит: Erlang/Elixir, PostgreSQL, Caddy, ufw (файрвол), fail2ban,
-автообновления безопасности, создаёт непривилегированного пользователя
-`live_chat_widget` для запуска приложения.
+Скрипт ставит: Docker, Caddy, ufw (файрвол), fail2ban, автообновления
+безопасности, создаёт непривилегированного пользователя `live_chat_widget`
+для запуска приложения. PostgreSQL отдельно ставить не нужно — он тоже
+живёт в контейнере (см. раздел 3).
 
 **Важно про SSH:** скрипт не трогает SSH-конфиг автоматически. После него —
 убедитесь, что вход по ключу работает **в отдельном терминале**, не закрывая
@@ -62,10 +63,16 @@ PermitRootLogin no
 
 ## 3. База данных
 
-```bash
-sudo -u postgres psql -c "CREATE ROLE live_chat_widget WITH LOGIN PASSWORD 'придумайте_пароль';"
-sudo -u postgres psql -c "CREATE DATABASE live_chat_widget_prod OWNER live_chat_widget;"
-```
+PostgreSQL — тоже контейнер (`db` в `docker-compose.yml`), без опубликованного
+порта: снаружи Docker-сети `db` не виден вообще, даже с самого хоста. Роль и
+базу отдельно создавать не нужно — официальный образ `postgres` сам создаёт
+их при первом старте из переменных `POSTGRES_DB`/`POSTGRES_USER`/
+`POSTGRES_PASSWORD` (заполняются в шаге 4). Данные живут в именованном
+Docker-volume `pgdata` — переживают пересоздание контейнера, лежат физически
+в `/var/lib/docker/volumes/`.
+
+Придумайте пароль сейчас — понадобится в шаге 4 (нужен **тот же** пароль в
+двух местах env-файла: `POSTGRES_PASSWORD` и внутри `DATABASE_URL`).
 
 ## 4. Секреты приложения
 
@@ -352,11 +359,12 @@ nano /home/live_chat_widget/.ssh/authorized_keys`), сгенерируйте н�
 
 ### Что уже защищено по умолчанию
 
-- **Postgres слушает только `127.0.0.1`** (`ss -tlnp` показывает
-  `127.0.0.1:5432`, не `0.0.0.0`) — снаружи сервера порт 5432 недостижим в
-  принципе, даже без файрвола. Плюс ufw и так его не открывает.
-- **Парольная аутентификация scram-sha-256** (`pg_hba.conf`) для
-  подключений по сети — не `trust`, не устаревший `md5`.
+- **Postgres не публикует порт вообще** (`db` в `docker-compose.yml` без
+  секции `ports:`) — недостижим не только снаружи сервера, но и с самого
+  хоста: только контейнер `app` на той же Docker-сети может к нему
+  подключиться. Строже, чем стандартное "слушает только 127.0.0.1".
+- **Парольная аутентификация scram-sha-256** — дефолт официального образа
+  `postgres`, не `trust`, не устаревший `md5`.
 - **Наименьшие права**: роль `live_chat_widget` — не суперпользователь,
   владеет только своей базой `live_chat_widget_prod`, не видит другие БД
   на сервере и не может их создавать/удалять.
@@ -371,11 +379,13 @@ nano /home/live_chat_widget/.ssh/authorized_keys`), сгенерируйте н�
 хранятся последние 14 дней, старые удаляются автоматически. Лог —
 `/var/log/live_chat_widget-backup.log`.
 
-**Восстановление из бэкапа** (на этом же или другом сервере с тем же Postgres):
+**Восстановление из бэкапа** (на этом же или другом сервере — контейнер `db`
+должен быть поднят, `docker compose up -d db`):
 
 ```bash
-sudo -u postgres pg_restore -d live_chat_widget_prod --clean --if-exists \
-  /var/backups/live_chat_widget/live_chat_widget_prod_ДАТА.dump
+docker compose -f /opt/live_chat_widget/src/docker-compose.yml exec -T db \
+  pg_restore -U live_chat_widget -d live_chat_widget_prod --clean --if-exists \
+  < /var/backups/live_chat_widget/live_chat_widget_prod_ДАТА.dump
 ```
 
 Проверить, что бэкап реально восстанавливается — стоит делать периодически
@@ -428,6 +438,22 @@ sudo -u postgres pg_restore -d live_chat_widget_prod --clean --if-exists \
 в S3 непрерывно, восстановление на любой момент времени без второго живого
 сервера) — дешевле репликации, но чуть сложнее, чем просто `pg_dump` по
 крону.
+
+### Переезд на другой сервер
+
+Раз и приложение, и БД теперь в Docker — переезд на новый VDS выглядит так:
+
+1. Новый сервер: `curl -fsSL https://get.docker.com | sh`, поставить Caddy,
+   скопировать `docker-compose.yml`, `Caddyfile`, `/etc/live_chat_widget/live_chat_widget.env`.
+2. `docker compose up -d db`, дождаться, пока контейнер станет healthy.
+3. Восстановить туда последний бэкап (команда выше).
+4. `docker compose up -d` (поднимает `app`), проверить, что всё отвечает.
+5. Переключить DNS-A-запись на новый IP.
+
+Никакой возни с "какая версия Postgres/Erlang/Elixir стояла на старом
+сервере" — версии зафиксированы в образах, а не в состоянии конкретной
+машины. Это и есть главный практический выигрыш от контейнеризации БД,
+о котором вы спрашивали.
 
 ## Что сейчас в проде
 
