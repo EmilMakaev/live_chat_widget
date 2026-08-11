@@ -5,8 +5,8 @@ on:
     branches: [main]
   pull_request:
 
-# Least-privilege default: this workflow doesn't need to write anything
-# to the repo (no PR comments, no releases), so GITHUB_TOKEN stays read-only.
+# Least-privilege default. The `build` job below narrows this further to
+# add `packages: write`, only for the push-to-GHCR step.
 permissions:
   contents: read
 
@@ -60,10 +60,38 @@ jobs:
         env:
           MIX_ENV: test
 
-  deploy:
+  build:
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write # only this job can push to ghcr.io, and only as far as this repo's own package
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/live_chat_widget:latest
+            ghcr.io/${{ github.repository_owner }}/live_chat_widget:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
     environment: production # requires manual approval if you set that up — see DEPLOY.md
 
     steps:
