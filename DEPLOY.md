@@ -72,10 +72,15 @@ sudo -u postgres psql -c "CREATE DATABASE live_chat_widget_prod OWNER live_chat_
 ```bash
 sudo mkdir -p /etc/live_chat_widget
 sudo cp deploy/live_chat_widget.env.example /etc/live_chat_widget/live_chat_widget.env
-sudo chmod 600 /etc/live_chat_widget/live_chat_widget.env
-sudo chown root:root /etc/live_chat_widget/live_chat_widget.env
+sudo chown root:live_chat_widget /etc/live_chat_widget/live_chat_widget.env
+sudo chmod 640 /etc/live_chat_widget/live_chat_widget.env
 sudo nano /etc/live_chat_widget/live_chat_widget.env
 ```
+
+Группа `live_chat_widget` (не "все") может читать файл — `deploy.sh` работает от
+этого пользователя и должен сам прочитать секреты перед миграцией
+(`bin/migrate` не проходит через systemd и не получает `EnvironmentFile`
+автоматически, в отличие от самого приложения).
 
 Заполните: `PHX_HOST` (ваш домен), `SECRET_KEY_BASE` (`openssl rand -base64 48`),
 `DATABASE_URL` (с паролем из шага 3), `TELEGRAM_BOT_TOKEN`,
@@ -83,21 +88,33 @@ sudo nano /etc/live_chat_widget/live_chat_widget.env
 новый — просто сгенерируйте `openssl rand -hex 24` и используйте его
 одинаково и в env, и при следующем `setWebhook`), `PUBLIC_BASE_URL`.
 
-## 5. Systemd-сервис
+## 5. Docker
+
+Приложение теперь пакуется в Docker-образ и собирается **не на VDS** — на
+GitHub Actions (см. раздел 11), у которых полноценные amd64-раннеры без
+ограничений по RAM/CPU. VDS только скачивает готовый образ и запускает его.
+На сервере нужен только сам Docker:
 
 ```bash
-sudo cp deploy/live_chat_widget.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable live_chat_widget
+curl -fsSL https://get.docker.com | sh
 ```
 
-Разрешите пользователю `live_chat_widget` перезапускать именно этот сервис
-(и только его — не root-доступ целиком), чтобы `deploy.sh` мог сам
-рестартовать процесс после сборки:
+Systemd-юнит (`deploy/live_chat_widget.service`) для управления процессом
+больше не используется — Docker сам перезапускает контейнер по политике
+`restart: unless-stopped` из `docker-compose.yml`, а `docker.service`
+(ставится вместе с Docker) поднимает его при перезагрузке сервера. Логи
+идут в journald под тегом `live_chat_widget` — `journalctl -t live_chat_widget -f`
+работает так же, как раньше работал `journalctl -u live_chat_widget -f`.
+
+Разрешите пользователю `live_chat_widget` запускать **только** `deploy.sh`
+от root (управление Docker требует root/группу docker — но именно то, какой
+скрипт можно запустить, а не общий root-доступ, здесь и есть граница
+безопасности):
 
 ```bash
-echo 'live_chat_widget ALL=(root) NOPASSWD: /usr/bin/systemctl restart live_chat_widget, /usr/bin/systemctl status live_chat_widget' \
+echo 'live_chat_widget ALL=(root) NOPASSWD: /opt/live_chat_widget/src/deploy/deploy.sh' \
   | sudo tee /etc/sudoers.d/live_chat_widget
+sudo chmod 440 /etc/sudoers.d/live_chat_widget
 ```
 
 ## 6. Caddy (HTTPS)
@@ -108,15 +125,27 @@ sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
 sudo systemctl reload caddy
 ```
 
+Caddy не в курсе, что бэкенд теперь в контейнере — `docker-compose.yml`
+использует `network_mode: host`, так что приложение слушает `127.0.0.1:4000`
+точно так же, как раньше нативный процесс. Конфиг Caddy не меняется.
+
 ## 7. Первый деплой
 
 ```bash
 sudo -u live_chat_widget git clone <URL_вашего_репозитория> /opt/live_chat_widget/src
-sudo -u live_chat_widget bash /opt/live_chat_widget/src/deploy/deploy.sh
+sudo /opt/live_chat_widget/src/deploy/deploy.sh
 ```
 
-Скрипт: подтягивает код → собирает assets (JS-виджет + операторская панель)
-→ собирает release → прогоняет миграции → рестартует systemd-сервис.
+Скрипт: подтягивает код (`git pull`, только `docker-compose.yml`/`Caddyfile`/
+миграции — сам образ не собирается) → `docker compose pull` (тащит готовый
+образ из ghcr.io, собранный в CI) → миграции внутри контейнера
+(`docker compose run --rm app bin/migrate`) → `docker compose up -d`.
+
+Первый раз образа в ghcr.io ещё не будет, пока не пройдёт хотя бы один
+прогон CI (раздел 11) — до этого можно временно собрать образ прямо на
+сервере (`docker build -t ghcr.io/<ваш-github>/live_chat_widget:latest .`)
+и запустить `docker compose up -d` без `pull`, как сделал я при первом
+переключении.
 
 Проверка: `curl -I https://ваш-домен` должен вернуть `200`, и
 `sudo journalctl -u live_chat_widget -f` — смотреть логи вживую.
@@ -166,24 +195,33 @@ sudo -u live_chat_widget bash /opt/live_chat_widget/src/deploy/deploy.sh
 
 Что стоит сделать дополнительно (не входит в скрипты, но важно):
 
-- **Бэкапы БД** — cron с `pg_dump`, например ежедневно в 03:00, храня
-  последние ~14 копий, желательно копировать за пределы самого VDS
-  (S3-совместимое хранилище, другой сервер). Спрошу отдельно, если нужно —
-  могу написать скрипт бэкапа и настроить его.
-- **Мониторинг** — минимум: `journalctl -u live_chat_widget`, алерт на
+- **Мониторинг** — минимум: `journalctl -t live_chat_widget`, алерт на
   заполнение диска. При росте — Prometheus/Grafana или внешний
   uptime-монитор (UptimeRobot и т.п., бесплатный тариф хватит на старте).
 - **2FA на аккаунт у VDS-провайдера и на регистратора домена** — это вне
   зоны ответственности сервера, но именно туда чаще всего ломают SaaS.
 
+Бэкапы БД расписаны отдельно ниже, в разделе 12.
+
 ## 11. Автоматический деплой через GitHub Actions (CI/CD)
 
-Дальше — чтобы `git push` в `main` сам гонял тесты и (после этого) деплоил на
-сервер, без ручного `deploy.sh` каждый раз. Пайплайн уже лежит в
-[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml): джоба `test`
-(компиляция без warning'ов, `mix format --check-formatted`, `mix test` на
-Postgres-контейнере) → джоба `deploy` (только если `test` прошла и пуш именно
-в `main`).
+Дальше — чтобы `git push` в `main` сам гонял тесты, собирал Docker-образ и
+(после этого) деплоил на сервер, без ручного `deploy.sh` каждый раз. Пайплайн
+уже лежит в [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml):
+джоба `test` (компиляция без warning'ов, `mix format --check-formatted`,
+`mix test` на Postgres-контейнере) → джоба `build` (собирает Docker-образ и
+пушит в `ghcr.io/<владелец репозитория>/live_chat_widget`, используя
+встроенный `GITHUB_TOKEN` — отдельный секрет для этого не нужен) → джоба
+`deploy` (только если всё выше прошло и пуш именно в `main`).
+
+**Важно про видимость образа**: по умолчанию пакет в GHCR создаётся
+приватным, и `docker compose pull` на сервере не сможет его скачать без
+авторизации. Проще всего сделать пакет публичным (в самом образе нет
+секретов — они приезжают через env-файл только в момент запуска, а не
+зашиты внутрь): GitHub → ваш профиль → Packages → `live_chat_widget` →
+Package settings → Change visibility → Public. Либо, если хотите оставить
+приватным, — добавляем на сервер `docker login ghcr.io` с токеном (лишний
+секрет для хранения, поэтому по умолчанию рекомендую первый вариант).
 
 ### Модель угроз и почему так, а не проще
 
@@ -221,7 +259,7 @@ ssh-keygen -t ed25519 -f ./deploy_key -C "github-actions-deploy" -N ""
 ```bash
 sudo -u live_chat_widget mkdir -p /home/live_chat_widget/.ssh
 sudo -u live_chat_widget tee -a /home/live_chat_widget/.ssh/authorized_keys <<'EOF'
-command="/opt/live_chat_widget/src/deploy/deploy.sh",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-ed25519 AAAA...вставьте содержимое deploy_key.pub... github-actions-deploy
+command="sudo /opt/live_chat_widget/src/deploy/deploy.sh",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-ed25519 AAAA...вставьте содержимое deploy_key.pub... github-actions-deploy
 EOF
 sudo chmod 700 /home/live_chat_widget/.ssh
 sudo chmod 600 /home/live_chat_widget/.ssh/authorized_keys
@@ -310,17 +348,90 @@ nano /home/live_chat_widget/.ssh/authorized_keys`), сгенерируйте н�
 перестаёт работать в момент удаления строки — никаких прав уровня root он и
 так не давал.
 
-## Что нужно от вас, чтобы я сам довёл деплой до конца
+## 12. База данных: безопасность, бэкапы, репликация
 
-Если хотите, чтобы я выполнил эти шаги за вас, а не вы руками по гайду выше —
-дайте:
+### Что уже защищено по умолчанию
 
-1. IP сервера и SSH-доступ (лучше: создайте отдельного sudo-пользователя с
-   моим/вашим публичным ключом, не root-пароль).
-2. Домен, который будет указывать на сервер.
-3. Явное подтверждение, что можно выполнять команды на этом сервере
-   (это разово, для этой задачи — я не буду это считать постоянным
-   разрешением на будущее).
+- **Postgres слушает только `127.0.0.1`** (`ss -tlnp` показывает
+  `127.0.0.1:5432`, не `0.0.0.0`) — снаружи сервера порт 5432 недостижим в
+  принципе, даже без файрвола. Плюс ufw и так его не открывает.
+- **Парольная аутентификация scram-sha-256** (`pg_hba.conf`) для
+  подключений по сети — не `trust`, не устаревший `md5`.
+- **Наименьшие права**: роль `live_chat_widget` — не суперпользователь,
+  владеет только своей базой `live_chat_widget_prod`, не видит другие БД
+  на сервере и не может их создавать/удалять.
+- **Пароль роли** — сгенерирован случайно (`openssl rand`), хранится только
+  в `/etc/live_chat_widget/live_chat_widget.env` (права `640`,
+  `root:live_chat_widget`), не в git.
 
-Либо просто следуйте гайду сами — он самодостаточен, и я на связи, если
-что-то пойдёт не так на конкретном шаге.
+### Бэкапы — что настроено прямо сейчас
+
+`deploy/backup_db.sh` — ежедневно в 03:00 по cron (root):
+`pg_dump -Fc` (сжатый, самодостаточный формат) → `/var/backups/live_chat_widget/`,
+хранятся последние 14 дней, старые удаляются автоматически. Лог —
+`/var/log/live_chat_widget-backup.log`.
+
+**Восстановление из бэкапа** (на этом же или другом сервере с тем же Postgres):
+
+```bash
+sudo -u postgres pg_restore -d live_chat_widget_prod --clean --if-exists \
+  /var/backups/live_chat_widget/live_chat_widget_prod_ДАТА.dump
+```
+
+Проверить, что бэкап реально восстанавливается — стоит делать периодически
+руками (бэкап, который никто не пробовал восстановить, не бэкап).
+
+### Копия за пределами этого сервера — то, чего пока нет
+
+Сейчас бэкапы лежат **на том же VDS**. Если сгорит диск/сервер — бэкапы
+сгорят с ним. Варианты (нужно ваше решение, я не завожу это без вас —
+требуются either доступ к другому серверу, either платный S3-бакет):
+
+1. **Снапшоты у вашего VDS-провайдера** — самый простой вариант, если
+   провайдер это предлагает (часто есть в панели управления, иногда платно).
+   Не требует моей настройки — включается на стороне провайдера.
+2. **rclone → S3-совместимое хранилище** (Selectel S3, Yandex Object Storage,
+   Backblaze B2, Cloudflare R2 и т.п.): даёте бакет + ключи доступа, я
+   добавляю в `backup_db.sh` шаг `rclone copy` после каждого дампа.
+   Копейки в месяц при таком объёме БД.
+3. **scp на другую вашу машину** по cron — бесплатно, но требует, чтобы
+   та машина была доступна по сети и постоянно включена.
+
+Скажите, какой вариант подходит — донастрою `backup_db.sh` под него.
+
+### Репликация — когда она нужна и что это на самом деле означает
+
+Бэкапы защищают от потери данных ("вчера всё было, сегодня всё сломалось —
+откатились"), но не от **простоя**: если сервер упал, восстановление из
+дампа на новый сервер — это минуты-десятки минут, а не секунды. Настоящая
+репликация — это **отдельный второй сервер** с Postgres, куда данные льются
+непрерывно, и который может подхватить нагрузку почти сразу.
+
+Что это требует на практике:
+
+- **Второй VDS** (ещё один сервер — сейчас его нет, для теста был выделен
+  только один).
+- На нём — Postgres той же версии, `wal_level = replica` на основном сервере,
+  создание реплики через `pg_basebackup`, дальше — потоковая репликация
+  (WAL летит на реплику практически в реальном времени).
+- Дальше нужен план на "а что если основной сервер упал" — переключение
+  реплики в primary руками или через инструмент типа Patroni (последнее —
+  уже скорее для serious production, не для MVP).
+
+Для текущего масштаба проекта (MVP/тест) я бы **не стал** поднимать второй
+сервер прямо сейчас — это ощутимая дополнительная сложность и стоимость
+ради defense против сценария "сервер полностью умер", который бэкапы (пусть
+и с простоем в восстановлении) уже покрывают. Разумный следующий шаг —
+именно офсайт-копия бэкапов (пункт выше), а не полноценная репликация.
+Если/когда появится второй сервер и реальная нагрузка — возвращаемся к этому
+разговору, там ещё есть промежуточный вариант (WAL-G/pgBackRest — льют WAL
+в S3 непрерывно, восстановление на любой момент времени без второго живого
+сервера) — дешевле репликации, но чуть сложнее, чем просто `pg_dump` по
+крону.
+
+## Что сейчас в проде
+
+Задеплоено и работает на `https://web2-service.ru` — см. отчёт в чате о
+том, как именно это было сделано, что было исправлено по пути, и что
+осталось как открытый вопрос (в первую очередь — сетевая блокировка
+Telegram с этого сервера).

@@ -1,0 +1,19 @@
+# Production compose file — runs on the VDS. Postgres and Caddy stay as
+# native systemd services on the host (simpler backups, no volume juggling
+# for the DB); only the app itself is containerized.
+#
+# network_mode: host means the container shares the host's network stack —
+# DATABASE_URL=...@localhost/... and Caddy's reverse_proxy 127.0.0.1:4000
+# keep working unchanged, no Docker network/port-mapping config needed.
+
+services:
+  app:
+    image: ${IMAGE:-ghcr.io/emilmakaev/live_chat_widget:latest}
+    network_mode: host
+    env_file:
+      - /etc/live_chat_widget/live_chat_widget.env
+    restart: unless-stopped
+    logging:
+      driver: journald
+      options:
+        tag: live_chat_widget

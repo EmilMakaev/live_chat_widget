@@ -1,51 +1,31 @@
 #!/usr/bin/env bash
-# Build a new release from the current git checkout and switch to it.
-# Run on the VDS as the app user: sudo -u live_chat_widget bash deploy/deploy.sh
+# Pull the freshly-built image from GHCR and switch to it. Runs as root
+# (via the deploy user's forced `sudo` command — see DEPLOY.md "CI/CD"),
+# because managing Docker containers needs root/docker-group access anyway;
+# scoping *which script* can run as root is the actual security boundary
+# here, not which user invokes it.
 #
-# Layout:
-#   /opt/live_chat_widget/src              <- git checkout (this repo)
-#   /opt/live_chat_widget/releases/<ts>/    <- one build per deploy
-#   /opt/live_chat_widget/current           <- symlink to the active release
+# Image build happens in GitHub Actions (real amd64 hardware, plenty of
+# RAM) — this script never compiles anything, just pulls + restarts.
 
 set -euo pipefail
 
-APP_DIR="/opt/live_chat_widget"
-SRC_DIR="$APP_DIR/src"
-RELEASE_TS="$(date +%Y%m%d%H%M%S)"
-RELEASE_DIR="$APP_DIR/releases/$RELEASE_TS"
-
+SRC_DIR="/opt/live_chat_widget/src"
 cd "$SRC_DIR"
 
-echo "==> Pulling latest code"
+echo "==> Pulling latest docker-compose.yml / Caddyfile / migration files"
 git pull --ff-only
 
-export MIX_ENV=prod
-
-echo "==> Installing deps"
-mix local.hex --force --if-missing
-mix local.rebar --force --if-missing
-mix deps.get --only prod
-
-echo "==> Compiling + building assets"
-mix compile
-mix assets.deploy
-
-echo "==> Building release"
-mix release --overwrite
-
-echo "==> Installing release to $RELEASE_DIR"
-mkdir -p "$RELEASE_DIR"
-cp -a "_build/prod/rel/live_chat_widget/." "$RELEASE_DIR/"
-ln -sfn "$RELEASE_DIR" "$APP_DIR/current"
+echo "==> Pulling image"
+docker compose pull
 
 echo "==> Running database migrations"
-"$APP_DIR/current/bin/migrate"
+docker compose run --rm app bin/migrate
 
-echo "==> Restarting service"
-sudo systemctl restart live_chat_widget
+echo "==> Restarting"
+docker compose up -d
 
-echo "==> Pruning old releases (keeping last 5)"
-cd "$APP_DIR/releases"
-ls -1t | tail -n +6 | xargs -r rm -rf
+echo "==> Pruning unused images (keeps the last few, drops the rest)"
+docker image prune -f
 
-echo "==> Deployed release $RELEASE_TS"
+echo "==> Deployed $(docker compose images app --format '{{.Tag}}' 2>/dev/null || echo unknown)"
