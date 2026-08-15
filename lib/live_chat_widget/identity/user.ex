@@ -8,6 +8,9 @@ defmodule LiveChatWidget.Identity.User do
     field :hashed_password, :string, redact: true
     field :confirmed_at, :utc_datetime
     field :authenticated_at, :utc_datetime, virtual: true
+    # Platform-level flag (LiveDashboard access etc.) — deliberately never
+    # part of any cast list below, so no user-facing form can ever set it.
+    field :is_admin, :boolean, default: false
 
     timestamps(type: :utc_datetime)
   end

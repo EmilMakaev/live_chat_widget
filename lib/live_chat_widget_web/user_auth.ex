@@ -286,4 +286,23 @@ defmodule LiveChatWidgetWeb.UserAuth do
   end
 
   defp maybe_store_return_to(conn), do: conn
+
+  @doc """
+  Plug for routes restricted to the platform admin (you), not to tenant
+  "admin"-role operators — LiveDashboard exposes system-wide internals
+  (every process, every Ecto query across every tenant), not something to
+  hand to a customer's account admin.
+
+  404s rather than flashing "access denied", so the route's existence isn't
+  confirmed to someone who stumbles onto it without the flag.
+  """
+  def require_admin_user(conn, _opts) do
+    if conn.assigns.current_scope && conn.assigns.current_scope.user.is_admin do
+      conn
+    else
+      conn
+      |> send_resp(404, "Not Found")
+      |> halt()
+    end
+  end
 end

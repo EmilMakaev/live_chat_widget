@@ -21,7 +21,9 @@ defmodule LiveChatWidget.MixProject do
   def application do
     [
       mod: {LiveChatWidget.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      # :os_mon powers LiveDashboard's "OS Data" tab (CPU/RAM/disk at the OS
+      # level, not just the BEAM VM) — stdlib, no extra service to run.
+      extra_applications: [:logger, :runtime_tools, :os_mon]
     ]
   end
 
