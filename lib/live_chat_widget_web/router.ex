@@ -29,19 +29,24 @@ defmodule LiveChatWidgetWeb.Router do
     post "/telegram", TelegramWebhookController, :create
   end
 
-  # Enable LiveDashboard and Swoosh mailbox preview in development
-  if Application.compile_env(:live_chat_widget, :dev_routes) do
-    # If you want to use the LiveDashboard in production, you should put
-    # it behind authentication and allow only admins to access it.
-    # If your application does not have an admins-only section yet,
-    # you can use Plug.BasicAuth to set up some basic authentication
-    # as long as you are also using SSL (which you should anyway).
-    import Phoenix.LiveDashboard.Router
+  # LiveDashboard shows system-wide internals (every process, every Ecto
+  # query across every tenant) — gated to the platform admin flag, not
+  # tied to any tenant's own "admin" role, and available in prod on purpose
+  # (not just :dev_routes) since that's exactly where you need it.
+  import Phoenix.LiveDashboard.Router
 
+  scope "/admin", LiveChatWidgetWeb do
+    pipe_through [:browser, :require_authenticated_user, :require_admin_user]
+
+    live_dashboard "/dashboard", metrics: LiveChatWidgetWeb.Telemetry
+  end
+
+  # Swoosh mailbox preview stays dev-only — prod uses a real mailer, there's
+  # nothing local to preview.
+  if Application.compile_env(:live_chat_widget, :dev_routes) do
     scope "/dev" do
       pipe_through :browser
 
-      live_dashboard "/dashboard", metrics: LiveChatWidgetWeb.Telemetry
       forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
   end

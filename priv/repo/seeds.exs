@@ -25,6 +25,8 @@ user =
   |> Repo.update!()
   |> User.confirm_changeset()
   |> Repo.update!()
+  |> Ecto.Changeset.change(is_admin: true)
+  |> Repo.update!()
 
 account =
   case Accounts.list_accounts_for_user(user.id) do
