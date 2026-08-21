@@ -79,5 +79,8 @@ defmodule LiveChatWidgetWeb.Router do
 
     post "/users/log-in", UserSessionController, :create
     delete "/users/log-out", UserSessionController, :delete
+
+    get "/auth/yandex", YandexAuthController, :request
+    get "/auth/yandex/callback", YandexAuthController, :callback
   end
 end

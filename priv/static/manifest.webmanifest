@@ -1,15 +1,21 @@
 {
-  "name": "Live Chat Widget — Панель оператора",
-  "short_name": "Chat Panel",
+  "name": "Chatlio — Панель оператора",
+  "short_name": "Chatlio",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#111827",
-  "theme_color": "#2563eb",
+  "background_color": "#ffffff",
+  "theme_color": "#4a7821",
   "icons": [
     {
-      "src": "/images/logo.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/images/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any"
     }
   ]

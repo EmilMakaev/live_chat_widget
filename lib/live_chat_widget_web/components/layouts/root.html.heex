@@ -4,10 +4,13 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
-    <meta name="theme-color" content="#2563eb" />
+    <meta name="theme-color" content="#4a7821" />
     <link rel="manifest" href={~p"/manifest.webmanifest"} />
-    <link rel="apple-touch-icon" href={~p"/images/logo.svg"} />
-    <.live_title default="LiveChatWidget" suffix=" · Phoenix Framework" phx-no-format>{assigns[:page_title]}</.live_title>
+    <link rel="icon" type="image/x-icon" href={~p"/favicon.ico"} />
+    <link rel="icon" type="image/png" sizes="32x32" href={~p"/images/favicon-32x32.png"} />
+    <link rel="icon" type="image/png" sizes="16x16" href={~p"/images/favicon-16x16.png"} />
+    <link rel="apple-touch-icon" href={~p"/images/apple-touch-icon.png"} />
+    <.live_title default="Chatlio" suffix=" · Учитывайте каждого клиента" phx-no-format>{assigns[:page_title]}</.live_title>
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
     </script>
@@ -41,26 +44,32 @@
     </script>
   </head>
   <body>
-    <ul class="menu menu-horizontal w-full relative z-10 flex items-center gap-4 px-4 sm:px-6 lg:px-8 justify-end">
-      <%= if @current_scope do %>
-        <li>
-          {@current_scope.user.email}
-        </li>
-        <li>
-          <.link href={~p"/users/settings"}>Settings</.link>
-        </li>
-        <li>
-          <.link href={~p"/users/log-out"} method="delete">Log out</.link>
-        </li>
-      <% else %>
-        <li>
-          <.link href={~p"/users/register"}>Register</.link>
-        </li>
-        <li>
-          <.link href={~p"/users/log-in"}>Log in</.link>
-        </li>
-      <% end %>
-    </ul>
+    <div class="h-12 relative z-10 flex items-center gap-4 px-4 sm:px-6 lg:px-8 border-b border-base-200 bg-base-100">
+      <a href="/" class="flex items-center gap-2 font-semibold text-primary shrink-0">
+        <img src={~p"/images/logo.png"} alt="Chatlio" class="h-6 w-auto" />
+        <span class="hidden sm:inline">Chatlio</span>
+      </a>
+      <ul class="menu menu-horizontal flex-1 items-center gap-2 justify-end p-0">
+        <%= if @current_scope do %>
+          <li>
+            <span class="text-sm text-base-content/60">{@current_scope.user.email}</span>
+          </li>
+          <li>
+            <.link href={~p"/users/settings"}>Settings</.link>
+          </li>
+          <li>
+            <.link href={~p"/users/log-out"} method="delete">Log out</.link>
+          </li>
+        <% else %>
+          <li>
+            <.link href={~p"/users/register"}>Register</.link>
+          </li>
+          <li>
+            <.link href={~p"/users/log-in"}>Log in</.link>
+          </li>
+        <% end %>
+      </ul>
+    </div>
     {@inner_content}
   </body>
 </html>
