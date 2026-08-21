@@ -12,6 +12,10 @@ config :live_chat_widget, :telegram,
   bot_token: System.get_env("TELEGRAM_BOT_TOKEN"),
   webhook_secret: System.get_env("TELEGRAM_WEBHOOK_SECRET")
 
+config :live_chat_widget, :yandex,
+  client_id: System.get_env("YANDEX_CLIENT_ID"),
+  client_secret: System.get_env("YANDEX_CLIENT_SECRET")
+
 config :live_chat_widget, :public_base_url, System.get_env("PUBLIC_BASE_URL")
 
 # config/runtime.exs is executed for all environments, including

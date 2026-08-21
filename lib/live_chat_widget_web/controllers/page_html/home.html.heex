@@ -1,12 +1,22 @@
 <Layouts.flash_group flash={@flash} />
 
-<div class="min-h-[80vh] flex items-center justify-center px-4">
-  <div class="max-w-md text-center space-y-6">
-    <h1 class="text-3xl font-bold">Live Chat Widget</h1>
-    <p class="text-gray-500">
+<div class="relative min-h-[calc(100vh-3rem)] flex items-center justify-center overflow-hidden px-4">
+  <div class="absolute -top-32 -right-32 size-96 rounded-full bg-primary/10 blur-3xl" />
+  <div class="absolute -bottom-32 -left-32 size-96 rounded-full bg-accent/10 blur-3xl" />
+
+  <div class="relative max-w-md text-center space-y-6">
+    <img src={~p"/images/logo.png"} alt="Chatlio" class="mx-auto h-16 w-auto" />
+
+    <div class="space-y-2">
+      <h1 class="text-3xl font-bold">Chatlio</h1>
+      <p class="text-base-content/60">Учитывайте каждого клиента</p>
+    </div>
+
+    <p class="text-base-content/70">
       Виджет онлайн-чата для сайта с пересылкой сообщений оператору в Telegram
       и веб-панелью для ответов.
     </p>
+
     <div class="flex justify-center gap-3">
       <.link navigate={~p"/users/log-in"} class="btn btn-primary">Войти</.link>
       <.link navigate={~p"/users/register"} class="btn btn-ghost">Регистрация</.link>

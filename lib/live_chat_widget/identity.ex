@@ -80,6 +80,27 @@ defmodule LiveChatWidget.Identity do
     |> Repo.insert()
   end
 
+  @doc """
+  Finds or creates a user by email for Yandex OAuth login.
+
+  A first-time Yandex login is treated like a magic-link login: Yandex has
+  already verified the email out-of-band, so the new user is inserted
+  already confirmed rather than sent a separate confirmation email.
+  """
+  def get_or_register_user_from_yandex(email) do
+    case get_user_by_email(email) do
+      %User{} = user ->
+        {:ok, user}
+
+      nil ->
+        Repo.transact(fn ->
+          with {:ok, user} <- register_user(%{email: email}) do
+            Repo.update(User.confirm_changeset(user))
+          end
+        end)
+    end
+  end
+
   ## Settings
 
   @doc """

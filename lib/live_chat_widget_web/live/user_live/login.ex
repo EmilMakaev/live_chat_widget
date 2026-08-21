@@ -90,6 +90,12 @@ defmodule LiveChatWidgetWeb.UserLive.Login do
             Log in only this time
           </.button>
         </.form>
+
+        <div class="divider">or</div>
+
+        <.link href={~p"/auth/yandex"} class="btn w-full">
+          Log in with Yandex
+        </.link>
       </div>
     </Layouts.app>
     """
