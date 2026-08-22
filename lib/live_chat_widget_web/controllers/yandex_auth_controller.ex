@@ -42,7 +42,7 @@ defmodule LiveChatWidgetWeb.YandexAuthController do
          {:ok, email} <- yandex_email(profile),
          {:ok, user} <- Identity.get_or_register_user_from_yandex(email) do
       conn
-      |> put_flash(:info, "Welcome back!")
+      |> put_flash(:info, "С возвращением!")
       |> UserAuth.log_in_user(user)
     else
       {:error, reason} ->

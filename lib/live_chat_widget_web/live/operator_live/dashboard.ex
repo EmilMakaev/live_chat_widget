@@ -41,7 +41,12 @@ defmodule LiveChatWidgetWeb.OperatorLive.Dashboard do
 
     <div :if={@account} class="flex h-[calc(100vh-3rem)] overflow-hidden">
       <aside class="w-80 shrink-0 border-r border-gray-200 overflow-y-auto">
-        <div class="px-4 py-3 font-semibold text-lg border-b border-gray-200">Диалоги</div>
+        <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+          <span class="font-semibold text-lg">Диалоги</span>
+          <.link navigate={~p"/sites"} class="text-sm text-gray-400 hover:text-gray-600">
+            Сайты
+          </.link>
+        </div>
         <div id="conversations" phx-update="stream">
           <div class="hidden only:block px-4 py-6 text-sm text-gray-400">
             Пока нет диалогов.

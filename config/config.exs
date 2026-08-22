@@ -49,6 +49,12 @@ config :phoenix_live_view,
 # at the `config/runtime.exs`.
 config :live_chat_widget, LiveChatWidget.Mailer, adapter: Swoosh.Adapters.Local
 
+# Russian is the only language the product ships in for now — Gettext stays
+# wired up (msgids, the "errors" domain, translate_error/1) so adding real
+# locale support later is just a matter of adding new .po files, not a
+# rewrite.
+config :live_chat_widget, LiveChatWidgetWeb.Gettext, default_locale: "ru"
+
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.25.4",

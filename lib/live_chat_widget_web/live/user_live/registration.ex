@@ -11,13 +11,12 @@ defmodule LiveChatWidgetWeb.UserLive.Registration do
       <div class="mx-auto max-w-sm">
         <div class="text-center">
           <.header>
-            Register for an account
+            Регистрация
             <:subtitle>
-              Already registered?
+              Уже есть аккаунт?
               <.link navigate={~p"/users/log-in"} class="font-semibold text-brand hover:underline">
-                Log in
+                Войти
               </.link>
-              to your account now.
             </:subtitle>
           </.header>
         </div>
@@ -33,15 +32,15 @@ defmodule LiveChatWidgetWeb.UserLive.Registration do
             phx-mounted={JS.focus()}
           />
 
-          <.button phx-disable-with="Creating account..." class="btn btn-primary w-full">
-            Create an account
+          <.button phx-disable-with="Создаём аккаунт..." class="btn btn-primary w-full">
+            Создать аккаунт
           </.button>
         </.form>
 
-        <div class="divider">or</div>
+        <div class="divider">или</div>
 
         <.link href={~p"/auth/yandex"} class="btn w-full">
-          Sign up with Yandex
+          Зарегистрироваться через Яндекс
         </.link>
       </div>
     </Layouts.app>
@@ -74,7 +73,7 @@ defmodule LiveChatWidgetWeb.UserLive.Registration do
          socket
          |> put_flash(
            :info,
-           "An email was sent to #{user.email}, please access it to confirm your account."
+           "На #{user.email} отправлено письмо — перейдите по ссылке в нём, чтобы подтвердить аккаунт."
          )
          |> push_navigate(to: ~p"/users/log-in")}
 
