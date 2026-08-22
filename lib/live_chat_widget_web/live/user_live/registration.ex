@@ -37,6 +37,12 @@ defmodule LiveChatWidgetWeb.UserLive.Registration do
             Create an account
           </.button>
         </.form>
+
+        <div class="divider">or</div>
+
+        <.link href={~p"/auth/yandex"} class="btn w-full">
+          Sign up with Yandex
+        </.link>
       </div>
     </Layouts.app>
     """

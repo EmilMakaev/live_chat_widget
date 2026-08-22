@@ -21,8 +21,22 @@ defmodule LiveChatWidgetWeb.OperatorLive.Dashboard do
     ~H"""
     <Layouts.flash_group flash={@flash} />
 
-    <div :if={is_nil(@account)} class="p-8 text-center text-gray-500">
-      К вашему аккаунту пока не привязана ни одна компания.
+    <div :if={is_nil(@account)} class="max-w-sm mx-auto mt-16 space-y-4">
+      <h2 class="text-lg font-semibold text-center">Создайте компанию</h2>
+      <p class="text-sm text-gray-500 text-center">
+        Чтобы добавить сайт и разместить на нём чат-виджет, сначала нужно создать компанию.
+      </p>
+      <form phx-submit="create_account" class="flex flex-col gap-2">
+        <input
+          type="text"
+          name="name"
+          placeholder="Название компании"
+          autocomplete="organization"
+          required
+          class="input input-bordered w-full"
+        />
+        <.button variant="primary" class="w-full">Создать компанию</.button>
+      </form>
     </div>
 
     <div :if={@account} class="flex h-[calc(100vh-3rem)] overflow-hidden">
@@ -158,6 +172,23 @@ defmodule LiveChatWidgetWeb.OperatorLive.Dashboard do
   end
 
   @impl true
+  def handle_event("create_account", %{"name" => name}, socket) do
+    user = socket.assigns.current_scope.user
+
+    case Accounts.create_account_with_owner(%{"name" => name}, user) do
+      {:ok, account} ->
+        if connected?(socket), do: PubSub.subscribe(PubSub.account_topic(account.id))
+
+        {:noreply,
+         socket
+         |> assign(:account, account)
+         |> stream(:conversations, [])}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Не удалось создать компанию — проверьте название.")}
+    end
+  end
+
   def handle_event("select_conversation", %{"id" => id}, socket) do
     {:noreply, push_patch(socket, to: ~p"/dashboard/#{id}")}
   end

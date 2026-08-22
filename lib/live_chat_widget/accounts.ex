@@ -17,6 +17,19 @@ defmodule LiveChatWidget.Accounts do
     |> Repo.insert()
   end
 
+  @doc """
+  Creates an account and makes `user` its owner in one transaction —
+  the "create my company" onboarding step for a user with no account yet.
+  """
+  def create_account_with_owner(attrs, user) do
+    Repo.transact(fn ->
+      with {:ok, account} <- create_account(attrs),
+           {:ok, _membership} <- add_membership(account, user, :owner) do
+        {:ok, account}
+      end
+    end)
+  end
+
   def get_account!(id), do: Repo.get!(Account, id)
 
   def add_membership(%Account{} = account, user, role \\ :owner) do
