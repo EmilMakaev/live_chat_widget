@@ -60,6 +60,7 @@ defmodule LiveChatWidgetWeb.Router do
       on_mount: [{LiveChatWidgetWeb.UserAuth, :require_authenticated}] do
       live "/dashboard", OperatorLive.Dashboard, :index
       live "/dashboard/:id", OperatorLive.Dashboard, :show
+      live "/sites", SiteLive.Index, :index
       live "/users/settings", UserLive.Settings, :edit
       live "/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email
     end

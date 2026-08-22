@@ -11,8 +11,8 @@ defmodule LiveChatWidgetWeb.UserLive.Settings do
     <Layouts.app flash={@flash} current_scope={@current_scope}>
       <div class="text-center">
         <.header>
-          Account Settings
-          <:subtitle>Manage your account email address and password settings</:subtitle>
+          Настройки аккаунта
+          <:subtitle>Управление email и паролем вашего аккаунта</:subtitle>
         </.header>
       </div>
 
@@ -25,7 +25,7 @@ defmodule LiveChatWidgetWeb.UserLive.Settings do
           spellcheck="false"
           required
         />
-        <.button variant="primary" phx-disable-with="Changing...">Change Email</.button>
+        <.button variant="primary" phx-disable-with="Меняем...">Изменить email</.button>
       </.form>
 
       <div class="divider" />
@@ -49,7 +49,7 @@ defmodule LiveChatWidgetWeb.UserLive.Settings do
         <.input
           field={@password_form[:password]}
           type="password"
-          label="New password"
+          label="Новый пароль"
           autocomplete="new-password"
           spellcheck="false"
           required
@@ -57,12 +57,12 @@ defmodule LiveChatWidgetWeb.UserLive.Settings do
         <.input
           field={@password_form[:password_confirmation]}
           type="password"
-          label="Confirm new password"
+          label="Подтвердите новый пароль"
           autocomplete="new-password"
           spellcheck="false"
         />
-        <.button variant="primary" phx-disable-with="Saving...">
-          Save Password
+        <.button variant="primary" phx-disable-with="Сохраняем...">
+          Сохранить пароль
         </.button>
       </.form>
     </Layouts.app>
@@ -74,10 +74,10 @@ defmodule LiveChatWidgetWeb.UserLive.Settings do
     socket =
       case Identity.update_user_email(socket.assigns.current_scope.user, token) do
         {:ok, _user} ->
-          put_flash(socket, :info, "Email changed successfully.")
+          put_flash(socket, :info, "Email успешно изменён.")
 
         {:error, _} ->
-          put_flash(socket, :error, "Email change link is invalid or it has expired.")
+          put_flash(socket, :error, "Ссылка для смены email недействительна или устарела.")
       end
 
     {:ok, push_navigate(socket, to: ~p"/users/settings")}
@@ -124,7 +124,7 @@ defmodule LiveChatWidgetWeb.UserLive.Settings do
           &url(~p"/users/settings/confirm-email/#{&1}")
         )
 
-        info = "A link to confirm your email change has been sent to the new address."
+        info = "Ссылка для подтверждения смены email отправлена на новый адрес."
         {:noreply, socket |> put_flash(:info, info)}
 
       changeset ->

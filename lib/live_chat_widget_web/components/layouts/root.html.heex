@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -55,17 +55,17 @@
             <span class="text-sm text-base-content/60">{@current_scope.user.email}</span>
           </li>
           <li>
-            <.link href={~p"/users/settings"}>Settings</.link>
+            <.link href={~p"/users/settings"}>Настройки</.link>
           </li>
           <li>
-            <.link href={~p"/users/log-out"} method="delete">Log out</.link>
+            <.link href={~p"/users/log-out"} method="delete">Выйти</.link>
           </li>
         <% else %>
           <li>
-            <.link href={~p"/users/register"}>Register</.link>
+            <.link href={~p"/users/register"}>Регистрация</.link>
           </li>
           <li>
-            <.link href={~p"/users/log-in"}>Log in</.link>
+            <.link href={~p"/users/log-in"}>Вход</.link>
           </li>
         <% end %>
         <li>

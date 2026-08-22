@@ -10,16 +10,16 @@ defmodule LiveChatWidgetWeb.UserLive.Login do
       <div class="mx-auto max-w-sm space-y-4">
         <div class="text-center">
           <.header>
-            <p>Log in</p>
+            <p>Вход</p>
             <:subtitle>
               <%= if @current_scope do %>
-                You need to reauthenticate to perform sensitive actions on your account.
+                Для выполнения важных действий с аккаунтом нужно подтвердить вход ещё раз.
               <% else %>
-                Don't have an account? <.link
+                Нет аккаунта? <.link
                   navigate={~p"/users/register"}
                   class="font-semibold text-brand hover:underline"
                   phx-no-format
-                >Sign up</.link> for an account now.
+                >Зарегистрируйтесь</.link>.
               <% end %>
             </:subtitle>
           </.header>
@@ -28,9 +28,9 @@ defmodule LiveChatWidgetWeb.UserLive.Login do
         <div :if={local_mail_adapter?()} class="alert alert-info">
           <.icon name="hero-information-circle" class="size-6 shrink-0" />
           <div>
-            <p>You are running the local mail adapter.</p>
+            <p>Используется локальный почтовый адаптер.</p>
             <p>
-              To see sent emails, visit <.link href="/dev/mailbox" class="underline">the mailbox page</.link>.
+              Отправленные письма можно посмотреть на <.link href="/dev/mailbox" class="underline">странице почтового ящика</.link>.
             </p>
           </div>
         </div>
@@ -53,11 +53,11 @@ defmodule LiveChatWidgetWeb.UserLive.Login do
             phx-mounted={JS.focus()}
           />
           <.button class="btn btn-primary w-full">
-            Log in with email <span aria-hidden="true">→</span>
+            Войти по email <span aria-hidden="true">→</span>
           </.button>
         </.form>
 
-        <div class="divider">or</div>
+        <div class="divider">или</div>
 
         <.form
           :let={f}
@@ -79,22 +79,22 @@ defmodule LiveChatWidgetWeb.UserLive.Login do
           <.input
             field={@form[:password]}
             type="password"
-            label="Password"
+            label="Пароль"
             autocomplete="current-password"
             spellcheck="false"
           />
           <.button class="btn btn-primary w-full" name={@form[:remember_me].name} value="true">
-            Log in and stay logged in <span aria-hidden="true">→</span>
+            Войти и оставаться в системе <span aria-hidden="true">→</span>
           </.button>
           <.button class="btn btn-primary btn-soft w-full mt-2">
-            Log in only this time
+            Войти только сейчас
           </.button>
         </.form>
 
-        <div class="divider">or</div>
+        <div class="divider">или</div>
 
         <.link href={~p"/auth/yandex"} class="btn w-full">
-          Log in with Yandex
+          Войти через Яндекс
         </.link>
       </div>
     </Layouts.app>
@@ -126,7 +126,7 @@ defmodule LiveChatWidgetWeb.UserLive.Login do
     end
 
     info =
-      "If your email is in our system, you will receive instructions for logging in shortly."
+      "Если такой email есть в системе, вы получите письмо со ссылкой для входа."
 
     {:noreply,
      socket
