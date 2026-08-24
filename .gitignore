@@ -35,6 +35,8 @@ live_chat_widget-*.tar
 npm-debug.log
 /assets/node_modules/
 
+/test_sites
+
 # Local secrets (bot tokens, etc.) — never commit.
 .env
 .env.*

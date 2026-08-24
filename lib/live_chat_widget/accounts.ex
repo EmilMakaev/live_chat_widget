@@ -32,6 +32,24 @@ defmodule LiveChatWidget.Accounts do
 
   def get_account!(id), do: Repo.get!(Account, id)
 
+  @doc """
+  Returns `user`'s account, creating one silently if they don't have one yet.
+
+  Every logged-in user gets exactly one account today (no invite/multi-tenant
+  flow), so there's nothing meaningful to ask them for — the "add your first
+  site" screen is the real first thing a new user sees, not a company-name form.
+  """
+  def get_or_create_account_for_user(user) do
+    case list_accounts_for_user(user.id) do
+      [account | _] ->
+        account
+
+      [] ->
+        {:ok, account} = create_account_with_owner(%{"name" => "Моя компания"}, user)
+        account
+    end
+  end
+
   def add_membership(%Account{} = account, user, role \\ :owner) do
     %Membership{}
     |> Membership.changeset(%{account_id: account.id, user_id: user.id, role: role})

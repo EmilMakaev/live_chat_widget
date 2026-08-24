@@ -16,7 +16,11 @@ defmodule LiveChatWidgetWeb.SiteLive.Index do
     <Layouts.app flash={@flash} current_scope={@current_scope}>
       <div class="flex items-center justify-between">
         <.header>Сайты</.header>
-        <.link navigate={~p"/dashboard"} class="text-sm text-base-content/60 hover:underline">
+        <.link
+          :if={@sites != []}
+          navigate={~p"/dashboard"}
+          class="text-sm text-base-content/60 hover:underline"
+        >
           ← Диалоги
         </.link>
       </div>
@@ -59,21 +63,13 @@ defmodule LiveChatWidgetWeb.SiteLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    user = socket.assigns.current_scope.user
-    account = user.id |> Accounts.list_accounts_for_user() |> List.first()
+    account = Accounts.get_or_create_account_for_user(socket.assigns.current_scope.user)
 
-    if account do
-      {:ok,
-       socket
-       |> assign(:account, account)
-       |> assign(:sites, Accounts.list_sites(account))
-       |> assign(:page_title, "Сайты")}
-    else
-      {:ok,
-       socket
-       |> put_flash(:error, "Сначала создайте компанию.")
-       |> push_navigate(to: ~p"/dashboard")}
-    end
+    {:ok,
+     socket
+     |> assign(:account, account)
+     |> assign(:sites, Accounts.list_sites(account))
+     |> assign(:page_title, "Сайты")}
   end
 
   @impl true
