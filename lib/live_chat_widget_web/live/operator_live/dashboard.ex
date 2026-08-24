@@ -21,25 +21,7 @@ defmodule LiveChatWidgetWeb.OperatorLive.Dashboard do
     ~H"""
     <Layouts.flash_group flash={@flash} />
 
-    <div :if={is_nil(@account)} class="max-w-sm mx-auto mt-16 space-y-4">
-      <h2 class="text-lg font-semibold text-center">Создайте компанию</h2>
-      <p class="text-sm text-gray-500 text-center">
-        Чтобы добавить сайт и разместить на нём чат-виджет, сначала нужно создать компанию.
-      </p>
-      <form phx-submit="create_account" class="flex flex-col gap-2">
-        <input
-          type="text"
-          name="name"
-          placeholder="Название компании"
-          autocomplete="organization"
-          required
-          class="input input-bordered w-full"
-        />
-        <.button variant="primary" class="w-full">Создать компанию</.button>
-      </form>
-    </div>
-
-    <div :if={@account} class="flex h-[calc(100vh-3rem)] overflow-hidden">
+    <div class="flex h-[calc(100vh-3rem)] overflow-hidden">
       <aside class="w-80 shrink-0 border-r border-gray-200 overflow-y-auto">
         <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
           <span class="font-semibold text-lg">Диалоги</span>
@@ -130,22 +112,22 @@ defmodule LiveChatWidgetWeb.OperatorLive.Dashboard do
   @impl true
   def mount(_params, _session, socket) do
     user = socket.assigns.current_scope.user
-    account = user.id |> Accounts.list_accounts_for_user() |> List.first()
+    account = Accounts.get_or_create_account_for_user(user)
 
-    if connected?(socket) && account do
-      PubSub.subscribe(PubSub.account_topic(account.id))
+    if Accounts.list_sites(account) == [] do
+      {:ok, redirect(socket, to: ~p"/sites")}
+    else
+      if connected?(socket), do: PubSub.subscribe(PubSub.account_topic(account.id))
+
+      {:ok,
+       socket
+       |> assign(:account, account)
+       |> assign(:conversation, nil)
+       |> assign(:subscribed_conversation_id, nil)
+       |> assign(:page_title, "Диалоги")
+       |> stream(:conversations, Chat.list_conversations(account.id))
+       |> stream(:messages, [])}
     end
-
-    conversations = if account, do: Chat.list_conversations(account.id), else: []
-
-    {:ok,
-     socket
-     |> assign(:account, account)
-     |> assign(:conversation, nil)
-     |> assign(:subscribed_conversation_id, nil)
-     |> assign(:page_title, "Диалоги")
-     |> stream(:conversations, conversations)
-     |> stream(:messages, [])}
   end
 
   @impl true
@@ -177,23 +159,6 @@ defmodule LiveChatWidgetWeb.OperatorLive.Dashboard do
   end
 
   @impl true
-  def handle_event("create_account", %{"name" => name}, socket) do
-    user = socket.assigns.current_scope.user
-
-    case Accounts.create_account_with_owner(%{"name" => name}, user) do
-      {:ok, account} ->
-        if connected?(socket), do: PubSub.subscribe(PubSub.account_topic(account.id))
-
-        {:noreply,
-         socket
-         |> assign(:account, account)
-         |> stream(:conversations, [])}
-
-      {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "Не удалось создать компанию — проверьте название.")}
-    end
-  end
-
   def handle_event("select_conversation", %{"id" => id}, socket) do
     {:noreply, push_patch(socket, to: ~p"/dashboard/#{id}")}
   end
