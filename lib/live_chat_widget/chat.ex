@@ -101,7 +101,7 @@ defmodule LiveChatWidget.Chat do
                body: body,
                attachments: attachments
              }),
-           {:ok, _} <- touch_conversation(conversation) do
+           {:ok, _} <- touch_conversation(conversation, message) do
         dispatch_to_channels(conversation, message, exclude_channel_id: nil)
         message
       else
@@ -126,7 +126,7 @@ defmodule LiveChatWidget.Chat do
                conversation,
                Map.merge(%{direction: :outbound, sender_type: :operator}, attrs)
              ),
-           {:ok, conversation} <- touch_conversation(conversation),
+           {:ok, conversation} <- touch_conversation(conversation, message),
            {:ok, conversation} <-
              maybe_claim(conversation, attrs[:sender_user_id], source_channel_id) do
         dispatch_to_channels(conversation, message, exclude_channel_id: source_channel_id)
@@ -195,14 +195,32 @@ defmodule LiveChatWidget.Chat do
     end
   end
 
-  defp touch_conversation(conversation) do
+  @preview_length 120
+
+  defp touch_conversation(conversation, message) do
     {:ok, conversation} =
       conversation
-      |> Ecto.Changeset.change(last_message_at: DateTime.utc_now())
+      |> Ecto.Changeset.change(
+        last_message_at: DateTime.utc_now(),
+        last_message_sender_type: message.sender_type,
+        last_message_preview: preview(message.body)
+      )
       |> Repo.update()
 
     broadcast_conversation_update(conversation)
     {:ok, conversation}
+  end
+
+  defp preview(nil), do: nil
+
+  defp preview(body) do
+    body = String.trim(body)
+
+    if String.length(body) > @preview_length do
+      String.slice(body, 0, @preview_length) <> "…"
+    else
+      body
+    end
   end
 
   defp broadcast_conversation_update(conversation) do
