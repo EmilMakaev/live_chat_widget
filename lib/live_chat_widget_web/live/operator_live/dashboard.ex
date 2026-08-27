@@ -44,10 +44,28 @@ defmodule LiveChatWidgetWeb.OperatorLive.Dashboard do
             ]}
           >
             <div class="flex justify-between items-center gap-2">
-              <span class="font-medium truncate">{Visitor.display_name(c.visitor)}</span>
+              <span class="flex items-center gap-1.5 min-w-0">
+                <span
+                  :if={c.last_message_sender_type == :visitor}
+                  class="size-1.5 rounded-full bg-warning shrink-0"
+                  title="Ждёт ответа"
+                />
+                <span class={[
+                  "truncate",
+                  if(c.last_message_sender_type == :visitor,
+                    do: "font-semibold",
+                    else: "font-medium text-base-content/70"
+                  )
+                ]}>
+                  {Visitor.display_name(c.visitor)}
+                </span>
+              </span>
               {status_pill(c.status)}
             </div>
             <div class="text-xs text-base-content/50 truncate">{c.site.domain}</div>
+            <div :if={c.last_message_preview} class="text-xs text-base-content/40 truncate mt-0.5">
+              {last_message_prefix(c.last_message_sender_type)}{c.last_message_preview}
+            </div>
           </div>
         </div>
       </aside>
@@ -207,6 +225,9 @@ defmodule LiveChatWidgetWeb.OperatorLive.Dashboard do
       socket
     end
   end
+
+  defp last_message_prefix(:operator), do: "Вы: "
+  defp last_message_prefix(_), do: ""
 
   defp status_badge(:open), do: {"Открыт", "bg-info/15 text-info"}
   defp status_badge(:claimed), do: {"В работе", "bg-warning/15 text-warning"}

@@ -8,6 +8,8 @@ defmodule LiveChatWidget.Chat.Conversation do
     field :status, Ecto.Enum, values: @statuses, default: :open
     field :department, :string
     field :last_message_at, :utc_datetime_usec
+    field :last_message_sender_type, Ecto.Enum, values: ~w(visitor operator system)a
+    field :last_message_preview, :string
 
     belongs_to :site, LiveChatWidget.Accounts.Site
     belongs_to :visitor, LiveChatWidget.Chat.Visitor
