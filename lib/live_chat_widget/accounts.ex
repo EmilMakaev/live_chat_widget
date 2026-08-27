@@ -80,6 +80,12 @@ defmodule LiveChatWidget.Accounts do
 
   def get_site!(id), do: Repo.get!(Site, id)
 
+  def update_site_widget(%Site{} = site, attrs) do
+    site
+    |> Site.widget_changeset(attrs)
+    |> Repo.update()
+  end
+
   def get_site_by_token(token) when is_binary(token) do
     Repo.get_by(Site, site_token: token)
   end

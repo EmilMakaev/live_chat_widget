@@ -30,7 +30,10 @@ defmodule LiveChatWidgetWeb.UserLive.Confirmation do
           >
             Подтвердить и оставаться в системе
           </.button>
-          <.button phx-disable-with="Подтверждаем..." class="btn btn-primary btn-soft w-full mt-2">
+          <.button
+            phx-disable-with="Подтверждаем..."
+            class="btn btn-primary btn-soft w-full mt-2"
+          >
             Подтвердить и войти только сейчас
           </.button>
         </.form>

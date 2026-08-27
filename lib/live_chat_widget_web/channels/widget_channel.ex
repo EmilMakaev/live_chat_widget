@@ -29,7 +29,13 @@ defmodule LiveChatWidgetWeb.WidgetChannel do
 
       messages = Chat.list_messages(conversation.id) |> Enum.map(&render_message/1)
 
-      {:ok, %{visitor_token: visitor.visitor_token, messages: messages}, socket}
+      widget = %{
+        color: site.widget_color,
+        icon: site.widget_icon,
+        size: site.widget_size
+      }
+
+      {:ok, %{visitor_token: visitor.visitor_token, messages: messages, widget: widget}, socket}
     else
       {:error, :unknown_site} -> {:error, %{reason: "unknown_site"}}
       {:error, :rate_limited} -> {:error, %{reason: "rate_limited"}}

@@ -22,15 +22,15 @@ defmodule LiveChatWidgetWeb.OperatorLive.Dashboard do
     <Layouts.flash_group flash={@flash} />
 
     <div class="flex h-[calc(100vh-3rem)] overflow-hidden">
-      <aside class="w-80 shrink-0 border-r border-gray-200 overflow-y-auto">
-        <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+      <aside class="w-80 shrink-0 border-r border-base-200 overflow-y-auto">
+        <div class="px-4 py-3 border-b border-base-200 flex items-center justify-between">
           <span class="font-semibold text-lg">Диалоги</span>
-          <.link navigate={~p"/sites"} class="text-sm text-gray-400 hover:text-gray-600">
+          <.link navigate={~p"/sites"} class="text-sm text-base-content/50 hover:text-base-content">
             Сайты
           </.link>
         </div>
         <div id="conversations" phx-update="stream">
-          <div class="hidden only:block px-4 py-6 text-sm text-gray-400">
+          <div id="no-conversations" class="hidden only:block px-4 py-6 text-sm text-base-content/40">
             Пока нет диалогов.
           </div>
           <div
@@ -39,31 +39,31 @@ defmodule LiveChatWidgetWeb.OperatorLive.Dashboard do
             phx-click="select_conversation"
             phx-value-id={c.id}
             class={[
-              "px-4 py-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50",
-              @conversation && @conversation.id == c.id && "bg-gray-100"
+              "px-4 py-3 border-b border-base-200 cursor-pointer hover:bg-base-200",
+              @conversation && @conversation.id == c.id && "bg-base-300"
             ]}
           >
             <div class="flex justify-between items-center gap-2">
               <span class="font-medium truncate">{Visitor.display_name(c.visitor)}</span>
               {status_pill(c.status)}
             </div>
-            <div class="text-xs text-gray-500 truncate">{c.site.name}</div>
+            <div class="text-xs text-base-content/50 truncate">{c.site.domain}</div>
           </div>
         </div>
       </aside>
 
       <section class="flex-1 flex flex-col min-w-0">
         <%= if @conversation do %>
-          <div class="px-4 py-3 border-b border-gray-200 flex items-center gap-3">
+          <div class="px-4 py-3 border-b border-base-200 flex items-center gap-3">
             <span class="font-semibold">{Visitor.display_name(@conversation.visitor)}</span>
             {status_pill(@conversation.status)}
-            <span :if={@conversation.claimed_by_user} class="text-xs text-gray-500">
+            <span :if={@conversation.claimed_by_user} class="text-xs text-base-content/50">
               ведёт {@conversation.claimed_by_user.email}
             </span>
           </div>
 
           <div
-            class="flex-1 overflow-y-auto px-4 py-4 space-y-2 bg-gray-50"
+            class="flex-1 overflow-y-auto px-4 py-4 space-y-2 bg-base-200"
             id="messages"
             phx-update="stream"
           >
@@ -78,7 +78,7 @@ defmodule LiveChatWidgetWeb.OperatorLive.Dashboard do
 
           <form
             phx-submit="send_reply"
-            class="p-3 border-t border-gray-200 flex gap-2"
+            class="p-3 border-t border-base-200 flex gap-2"
             id="reply-form"
           >
             <input
@@ -91,7 +91,7 @@ defmodule LiveChatWidgetWeb.OperatorLive.Dashboard do
             <.button variant="primary">Отправить</.button>
           </form>
         <% else %>
-          <div class="flex-1 flex items-center justify-center text-gray-400">
+          <div class="flex-1 flex items-center justify-center text-base-content/40">
             Выберите диалог слева
           </div>
         <% end %>
@@ -208,11 +208,11 @@ defmodule LiveChatWidgetWeb.OperatorLive.Dashboard do
     end
   end
 
-  defp status_badge(:open), do: {"Открыт", "bg-blue-100 text-blue-800"}
-  defp status_badge(:claimed), do: {"В работе", "bg-amber-100 text-amber-800"}
-  defp status_badge(:closed), do: {"Закрыт", "bg-gray-100 text-gray-600"}
+  defp status_badge(:open), do: {"Открыт", "bg-info/15 text-info"}
+  defp status_badge(:claimed), do: {"В работе", "bg-warning/15 text-warning"}
+  defp status_badge(:closed), do: {"Закрыт", "bg-base-300 text-base-content/60"}
 
-  defp bubble_align(:visitor), do: "mr-auto bg-gray-100 text-gray-900"
-  defp bubble_align(:operator), do: "ml-auto bg-blue-600 text-white"
-  defp bubble_align(:system), do: "mx-auto bg-transparent text-gray-400 text-xs italic"
+  defp bubble_align(:visitor), do: "mr-auto bg-base-300 text-base-content"
+  defp bubble_align(:operator), do: "ml-auto bg-primary text-primary-content"
+  defp bubble_align(:system), do: "mx-auto bg-transparent text-base-content/40 text-xs italic"
 end

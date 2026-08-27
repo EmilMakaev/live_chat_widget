@@ -4,6 +4,23 @@ import { Socket } from "phoenix"
 // Ships as its own small bundle (see config/config.exs :widget esbuild profile) so
 // embedding it never pulls in Phoenix LiveView / the operator panel's JS.
 ;(function () {
+  const ICONS = {
+    chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>',
+    headset:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>',
+    smiley:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>',
+    bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
+    question:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2.5 2-2.5 3.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+  }
+
+  const SIZES = {
+    compact: { launcher: 48, iconScale: 0.5, panelW: 280, panelH: 380 },
+    default: { launcher: 56, iconScale: 0.5, panelW: 320, panelH: 440 },
+    large: { launcher: 64, iconScale: 0.5, panelW: 360, panelH: 520 }
+  }
+
   const scriptTag = document.currentScript || findOwnScriptTag()
   if (!scriptTag) return
 
@@ -35,6 +52,7 @@ import { Socket } from "phoenix"
     .join()
     .receive("ok", (resp) => {
       localStorage.setItem(storageKey, resp.visitor_token)
+      if (resp.widget) ui.applyConfig(resp.widget)
       resp.messages.forEach(ui.appendMessage)
       ui.setStatus("online")
     })
@@ -92,7 +110,7 @@ import { Socket } from "phoenix"
 
     shadow.innerHTML = `
       <style>${css()}</style>
-      <div class="lcw-launcher" part="launcher">💬</div>
+      <div class="lcw-launcher" part="launcher">${ICONS.chat}</div>
       <div class="lcw-panel" hidden>
         <div class="lcw-header">
           <span>Чат с нами</span>
@@ -131,6 +149,20 @@ import { Socket } from "phoenix"
 
     return {
       root,
+      applyConfig(config) {
+        if (config.color) root.style.setProperty("--lcw-color", config.color)
+
+        if (config.icon && ICONS[config.icon]) {
+          launcher.innerHTML = ICONS[config.icon]
+        }
+
+        const size = SIZES[config.size] || SIZES.default
+        launcher.style.width = size.launcher + "px"
+        launcher.style.height = size.launcher + "px"
+        launcher.style.setProperty("--lcw-icon-size", Math.round(size.launcher * size.iconScale) + "px")
+        panel.style.width = size.panelW + "px"
+        panel.style.height = size.panelH + "px"
+      },
       onSend(cb) {
         onSendCallback = cb
       },
@@ -158,10 +190,11 @@ import { Socket } from "phoenix"
       :host, * { box-sizing: border-box; font-family: -apple-system, system-ui, sans-serif; }
       .lcw-launcher {
         position: fixed; bottom: 20px; right: 20px; width: 56px; height: 56px;
-        border-radius: 50%; background: #2563eb; color: #fff; display: flex;
+        border-radius: 50%; background: var(--lcw-color, #2563eb); color: #fff; display: flex;
         align-items: center; justify-content: center; font-size: 24px; cursor: pointer;
         box-shadow: 0 4px 14px rgba(0,0,0,.25); z-index: 2147483000;
       }
+      .lcw-launcher svg { width: var(--lcw-icon-size, 28px); height: var(--lcw-icon-size, 28px); }
       .lcw-panel {
         position: fixed; bottom: 88px; right: 20px; width: 320px; max-width: calc(100vw - 40px);
         height: 440px; max-height: calc(100vh - 120px); background: #fff; border-radius: 12px;
@@ -170,7 +203,7 @@ import { Socket } from "phoenix"
       }
       .lcw-panel[hidden] { display: none; }
       .lcw-header {
-        background: #2563eb; color: #fff; padding: 12px 16px; font-weight: 600;
+        background: var(--lcw-color, #2563eb); color: #fff; padding: 12px 16px; font-weight: 600;
         display: flex; justify-content: space-between; align-items: center;
       }
       .lcw-status--online { color: #4ade80; }
@@ -178,11 +211,11 @@ import { Socket } from "phoenix"
       .lcw-messages { flex: 1; overflow-y: auto; padding: 12px; background: #f8fafc; }
       .lcw-msg { max-width: 80%; margin-bottom: 8px; padding: 8px 12px; border-radius: 10px; font-size: 14px; line-height: 1.35; word-wrap: break-word; }
       .lcw-msg--them { background: #e2e8f0; margin-right: auto; }
-      .lcw-msg--me { background: #2563eb; color: #fff; margin-left: auto; }
+      .lcw-msg--me { background: var(--lcw-color, #2563eb); color: #fff; margin-left: auto; }
       .lcw-error { background: #fef2f2; color: #b91c1c; font-size: 12px; padding: 6px 12px; }
       .lcw-form { display: flex; border-top: 1px solid #e2e8f0; }
       .lcw-form input { flex: 1; border: none; padding: 10px 12px; font-size: 14px; outline: none; }
-      .lcw-form button { border: none; background: #2563eb; color: #fff; padding: 0 16px; cursor: pointer; font-size: 14px; }
+      .lcw-form button { border: none; background: var(--lcw-color, #2563eb); color: #fff; padding: 0 16px; cursor: pointer; font-size: 14px; }
     `
   }
 })()

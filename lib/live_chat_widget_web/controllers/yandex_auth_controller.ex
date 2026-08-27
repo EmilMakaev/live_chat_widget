@@ -47,7 +47,11 @@ defmodule LiveChatWidgetWeb.YandexAuthController do
     else
       {:error, reason} ->
         Logger.warning("Yandex OAuth login failed: #{inspect(reason)}")
-        login_error(conn, "Не удалось войти через Яндекс. Попробуйте снова или используйте email.")
+
+        login_error(
+          conn,
+          "Не удалось войти через Яндекс. Попробуйте снова или используйте email."
+        )
     end
   end
 

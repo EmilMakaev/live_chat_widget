@@ -11,6 +11,22 @@ defmodule LiveChatWidgetWeb.Layouts do
   # and other static content.
   embed_templates "layouts/*"
 
+  alias LiveChatWidget.Accounts
+
+  @doc """
+  Whether the "Диалоги" header link is worth showing — before the first
+  site is added there's nothing there but an immediate redirect back to
+  "Сайты", so hide it until it actually leads somewhere.
+  """
+  def dialogs_visible?(nil), do: false
+
+  def dialogs_visible?(current_scope) do
+    case Accounts.list_accounts_for_user(current_scope.user.id) do
+      [account | _] -> Accounts.list_sites(account) != []
+      [] -> false
+    end
+  end
+
   @doc """
   Renders your app layout.
 
