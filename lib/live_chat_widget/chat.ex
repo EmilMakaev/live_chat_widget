@@ -223,9 +223,18 @@ defmodule LiveChatWidget.Chat do
     end
   end
 
+  # Broadcasts the conversation struct we already have in memory (freshly
+  # updated by `Repo.update/1` above), fully preloaded — subscribers must
+  # not re-fetch it themselves. This call runs inside the same
+  # `Repo.transaction` as the message insert, so a re-fetch from another
+  # process can race the commit and read the pre-update row; the operator's
+  # own LiveView never hit this because handling its own broadcast has to
+  # wait for `Repo.transaction/1` to return (i.e. after commit), but a
+  # visitor's message — broadcast from the WidgetChannel process — has no
+  # such ordering guarantee against a subscriber's independent query.
   defp broadcast_conversation_update(conversation) do
-    site = Accounts.get_site!(conversation.site_id)
-    PubSub.broadcast_conversation_update(site.account_id, conversation)
+    conversation = Repo.preload(conversation, [:visitor, :site, :claimed_by_user])
+    PubSub.broadcast_conversation_update(conversation.site.account_id, conversation)
   end
 
   defp dispatch_to_channels(conversation, message, exclude_channel_id: exclude_id) do
