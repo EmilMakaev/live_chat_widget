@@ -39,8 +39,11 @@ defmodule LiveChatWidgetWeb.OperatorLive.Dashboard do
             phx-click="select_conversation"
             phx-value-id={c.id}
             class={[
-              "px-4 py-3 border-b border-base-200 cursor-pointer hover:bg-base-200",
-              @conversation && @conversation.id == c.id && "bg-base-300"
+              "px-4 py-3 border-b border-base-200 border-l-[3px] cursor-pointer hover:bg-base-200",
+              if(@conversation && @conversation.id == c.id,
+                do: "bg-base-300 border-l-primary",
+                else: "border-l-transparent"
+              )
             ]}
           >
             <div class="flex justify-between items-center gap-2">
@@ -152,15 +155,39 @@ defmodule LiveChatWidgetWeb.OperatorLive.Dashboard do
   def handle_params(%{"id" => id}, _uri, socket) do
     conversation = Chat.get_conversation!(id)
     socket = resubscribe_to_conversation(socket, conversation.id)
+    previously_selected_id = socket.assigns[:conversation] && socket.assigns.conversation.id
 
-    {:noreply,
-     socket
-     |> assign(:conversation, conversation)
-     |> stream(:messages, Chat.list_messages(conversation.id), reset: true)}
+    socket =
+      socket
+      |> assign(:conversation, conversation)
+      |> stream(:messages, Chat.list_messages(conversation.id), reset: true)
+      # The sidebar row's highlight reads `@conversation`, but stream items
+      # are only re-rendered when explicitly `stream_insert`-ed — changing
+      # `@conversation` alone doesn't touch already-rendered rows. Re-insert
+      # the newly- and previously-selected rows so both pick up the change.
+      |> stream_insert(:conversations, conversation)
+      |> unhighlight_previous(previously_selected_id, conversation.id)
+
+    {:noreply, socket}
   end
 
   def handle_params(_params, _uri, socket) do
-    {:noreply, assign(socket, conversation: nil)}
+    previously_selected_id = socket.assigns[:conversation] && socket.assigns.conversation.id
+
+    socket =
+      socket
+      |> assign(:conversation, nil)
+      |> unhighlight_previous(previously_selected_id, nil)
+
+    {:noreply, socket}
+  end
+
+  defp unhighlight_previous(socket, previous_id, current_id) do
+    if previous_id && previous_id != current_id do
+      stream_insert(socket, :conversations, Chat.get_conversation!(previous_id))
+    else
+      socket
+    end
   end
 
   defp resubscribe_to_conversation(socket, conversation_id) do
@@ -208,12 +235,15 @@ defmodule LiveChatWidgetWeb.OperatorLive.Dashboard do
   end
 
   def handle_info({:conversation_updated, conversation}, socket) do
-    full_conversation = Chat.get_conversation!(conversation.id)
-
+    # `conversation` here is the fully-preloaded struct Chat already had in
+    # memory when it broadcast this — deliberately NOT re-fetched from the
+    # DB. A re-fetch from this process could race the sender's still-open
+    # transaction and read the pre-update row (see the comment on
+    # `Chat.broadcast_conversation_update/1`).
     socket =
       socket
-      |> stream_insert(:conversations, full_conversation, at: 0)
-      |> maybe_refresh_selected(full_conversation)
+      |> stream_insert(:conversations, conversation, at: 0)
+      |> maybe_refresh_selected(conversation)
 
     {:noreply, socket}
   end

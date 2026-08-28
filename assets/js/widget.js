@@ -117,6 +117,7 @@ import { Socket } from "phoenix"
           <span class="lcw-status">●</span>
         </div>
         <div class="lcw-messages"></div>
+        <button class="lcw-scrolldown" type="button" hidden aria-label="Прокрутить вниз">↓</button>
         <div class="lcw-error" hidden></div>
         <form class="lcw-form">
           <input type="text" maxlength="4000" placeholder="Напишите сообщение…" autocomplete="off" />
@@ -128,14 +129,40 @@ import { Socket } from "phoenix"
     const launcher = shadow.querySelector(".lcw-launcher")
     const panel = shadow.querySelector(".lcw-panel")
     const messages = shadow.querySelector(".lcw-messages")
+    const scrollDownBtn = shadow.querySelector(".lcw-scrolldown")
     const errorBox = shadow.querySelector(".lcw-error")
     const form = shadow.querySelector(".lcw-form")
     const input = shadow.querySelector("input")
     const status = shadow.querySelector(".lcw-status")
 
+    function isNearBottom() {
+      return messages.scrollHeight - messages.scrollTop - messages.clientHeight < 40
+    }
+
+    function scrollToBottom() {
+      messages.scrollTop = messages.scrollHeight
+    }
+
+    function updateScrollButton() {
+      scrollDownBtn.hidden = isNearBottom()
+    }
+
+    messages.addEventListener("scroll", updateScrollButton)
+    scrollDownBtn.addEventListener("click", () => {
+      scrollToBottom()
+      updateScrollButton()
+    })
+
     launcher.addEventListener("click", () => {
       panel.hidden = !panel.hidden
-      if (!panel.hidden) input.focus()
+      if (!panel.hidden) {
+        input.focus()
+        // Messages appended while the panel was hidden (display: none)
+        // couldn't actually scroll — scrollHeight reads 0 for hidden
+        // elements — so the first real open always needs its own scroll.
+        scrollToBottom()
+        updateScrollButton()
+      }
     })
 
     let onSendCallback = () => {}
@@ -168,12 +195,14 @@ import { Socket } from "phoenix"
       },
       appendMessage(message) {
         errorBox.hidden = true
+        const stick = isNearBottom()
         const el = document.createElement("div")
         const mine = message.sender_type === "visitor"
         el.className = `lcw-msg ${mine ? "lcw-msg--me" : "lcw-msg--them"}`
         el.textContent = message.body
         messages.appendChild(el)
-        messages.scrollTop = messages.scrollHeight
+        if (stick) scrollToBottom()
+        updateScrollButton()
       },
       showError(text) {
         errorBox.hidden = false
@@ -209,6 +238,14 @@ import { Socket } from "phoenix"
       .lcw-status--online { color: #4ade80; }
       .lcw-status--offline { color: #f87171; }
       .lcw-messages { flex: 1; overflow-y: auto; padding: 12px; background: #f8fafc; }
+      .lcw-scrolldown {
+        position: absolute; right: 12px; bottom: 60px;
+        width: 32px; height: 32px; border-radius: 50%; border: none;
+        background: var(--lcw-color, #2563eb); color: #fff; cursor: pointer;
+        font-size: 15px; line-height: 1; box-shadow: 0 2px 8px rgba(0,0,0,.25);
+        display: flex; align-items: center; justify-content: center;
+      }
+      .lcw-scrolldown[hidden] { display: none; }
       .lcw-msg { max-width: 80%; margin-bottom: 8px; padding: 8px 12px; border-radius: 10px; font-size: 14px; line-height: 1.35; word-wrap: break-word; }
       .lcw-msg--them { background: #e2e8f0; margin-right: auto; }
       .lcw-msg--me { background: var(--lcw-color, #2563eb); color: #fff; margin-left: auto; }
