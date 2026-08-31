@@ -22,7 +22,10 @@ defmodule LiveChatWidgetWeb.OperatorLive.Dashboard do
     <Layouts.flash_group flash={@flash} />
 
     <div class="flex h-[calc(100vh-3rem)] overflow-hidden">
-      <aside class="w-80 shrink-0 border-r border-base-200 overflow-y-auto">
+      <aside class={[
+        "w-full md:w-80 shrink-0 border-r border-base-200 overflow-y-auto",
+        if(@conversation, do: "hidden md:block", else: "block")
+      ]}>
         <div class="px-4 py-3 border-b border-base-200 flex items-center justify-between">
           <span class="font-semibold text-lg">Диалоги</span>
           <.link navigate={~p"/sites"} class="text-sm text-base-content/50 hover:text-base-content">
@@ -73,12 +76,18 @@ defmodule LiveChatWidgetWeb.OperatorLive.Dashboard do
         </div>
       </aside>
 
-      <section class="flex-1 flex flex-col min-w-0">
+      <section class={[
+        "flex-1 flex-col min-w-0",
+        if(@conversation, do: "flex", else: "hidden md:flex")
+      ]}>
         <%= if @conversation do %>
           <div class="px-4 py-3 border-b border-base-200 flex items-center gap-3">
-            <span class="font-semibold">{Visitor.display_name(@conversation.visitor)}</span>
+            <.link patch={~p"/dashboard"} class="md:hidden text-base-content/60 hover:text-base-content">
+              <.icon name="hero-arrow-left" class="size-5" />
+            </.link>
+            <span class="font-semibold truncate">{Visitor.display_name(@conversation.visitor)}</span>
             {status_pill(@conversation.status)}
-            <span :if={@conversation.claimed_by_user} class="text-xs text-base-content/50">
+            <span :if={@conversation.claimed_by_user} class="text-xs text-base-content/50 truncate hidden sm:inline">
               ведёт {@conversation.claimed_by_user.email}
             </span>
           </div>
@@ -91,7 +100,7 @@ defmodule LiveChatWidgetWeb.OperatorLive.Dashboard do
             <div
               :for={{dom_id, m} <- @streams.messages}
               id={dom_id}
-              class={["max-w-[70%] rounded-lg px-3 py-2 text-sm", bubble_align(m.sender_type)]}
+              class={["max-w-[85%] sm:max-w-[70%] rounded-lg px-3 py-2 text-sm break-words", bubble_align(m.sender_type)]}
             >
               {m.body}
             </div>
@@ -107,7 +116,7 @@ defmodule LiveChatWidgetWeb.OperatorLive.Dashboard do
               name="body"
               autocomplete="off"
               placeholder="Напишите ответ…"
-              class="input input-bordered flex-1"
+              class="input input-bordered flex-1 min-w-0"
             />
             <.button variant="primary">Отправить</.button>
           </form>

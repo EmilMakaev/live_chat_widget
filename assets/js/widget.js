@@ -184,11 +184,15 @@ import { Socket } from "phoenix"
         }
 
         const size = SIZES[config.size] || SIZES.default
-        launcher.style.width = size.launcher + "px"
-        launcher.style.height = size.launcher + "px"
-        launcher.style.setProperty("--lcw-icon-size", Math.round(size.launcher * size.iconScale) + "px")
-        panel.style.width = size.panelW + "px"
-        panel.style.height = size.panelH + "px"
+        // Set sizes as CSS custom properties (inherited through the shadow
+        // boundary) rather than direct inline styles, so the small-screen
+        // media query in css() — which sets `width`/`height` on `.lcw-panel`
+        // itself — can still win the cascade. A plain inline `style.width`
+        // would always beat any stylesheet rule, mobile query included.
+        root.style.setProperty("--lcw-launcher-size", size.launcher + "px")
+        root.style.setProperty("--lcw-icon-size", Math.round(size.launcher * size.iconScale) + "px")
+        root.style.setProperty("--lcw-panel-w", size.panelW + "px")
+        root.style.setProperty("--lcw-panel-h", size.panelH + "px")
       },
       onSend(cb) {
         onSendCallback = cb
@@ -218,19 +222,31 @@ import { Socket } from "phoenix"
     return `
       :host, * { box-sizing: border-box; font-family: -apple-system, system-ui, sans-serif; }
       .lcw-launcher {
-        position: fixed; bottom: 20px; right: 20px; width: 56px; height: 56px;
+        position: fixed; bottom: 20px; right: 20px;
+        width: var(--lcw-launcher-size, 56px); height: var(--lcw-launcher-size, 56px);
         border-radius: 50%; background: var(--lcw-color, #2563eb); color: #fff; display: flex;
         align-items: center; justify-content: center; font-size: 24px; cursor: pointer;
         box-shadow: 0 4px 14px rgba(0,0,0,.25); z-index: 2147483000;
       }
       .lcw-launcher svg { width: var(--lcw-icon-size, 28px); height: var(--lcw-icon-size, 28px); }
       .lcw-panel {
-        position: fixed; bottom: 88px; right: 20px; width: 320px; max-width: calc(100vw - 40px);
-        height: 440px; max-height: calc(100vh - 120px); background: #fff; border-radius: 12px;
+        position: fixed; bottom: 88px; right: 20px;
+        width: var(--lcw-panel-w, 320px); max-width: calc(100vw - 40px);
+        height: var(--lcw-panel-h, 440px); max-height: calc(100vh - 120px);
+        background: #fff; border-radius: 12px;
         box-shadow: 0 8px 30px rgba(0,0,0,.2); display: flex; flex-direction: column;
         overflow: hidden; z-index: 2147483000;
       }
       .lcw-panel[hidden] { display: none; }
+      /* Below 480px there's no room for a floating card next to page content —
+         open the chat edge-to-edge instead, like a native full-screen sheet. */
+      @media (max-width: 480px) {
+        .lcw-panel {
+          left: 8px; right: 8px; top: 8px; bottom: 8px;
+          width: auto; height: auto; max-width: none; max-height: none;
+        }
+        .lcw-launcher { bottom: 16px; right: 16px; }
+      }
       .lcw-header {
         background: var(--lcw-color, #2563eb); color: #fff; padding: 12px 16px; font-weight: 600;
         display: flex; justify-content: space-between; align-items: center;

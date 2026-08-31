@@ -28,7 +28,7 @@ defmodule LiveChatWidgetWeb.SiteLive.Index do
   def render(assigns) do
     ~H"""
     <Layouts.app flash={@flash} current_scope={@current_scope}>
-      <div class="flex items-center justify-between">
+      <div class="flex items-center justify-between gap-2 flex-wrap">
         <.header>Сайты</.header>
         <.link
           :if={@sites != []}
@@ -55,9 +55,9 @@ defmodule LiveChatWidgetWeb.SiteLive.Index do
       </div>
 
       <div :for={site <- @sites} class="border border-base-300 rounded-lg p-4 space-y-3">
-        <div class="flex items-center justify-between gap-2">
-          <span class="font-medium">{site.domain}</span>
-          <span class="text-xs text-base-content/60 font-mono">{site.site_token}</span>
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <span class="font-medium truncate">{site.domain}</span>
+          <span class="text-xs text-base-content/60 font-mono truncate max-w-full">{site.site_token}</span>
         </div>
 
         <p class="text-sm text-base-content/60">
