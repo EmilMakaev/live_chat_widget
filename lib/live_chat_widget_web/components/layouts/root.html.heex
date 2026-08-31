@@ -48,12 +48,13 @@
     </script>
   </head>
   <body>
-    <div class="h-12 relative z-10 flex items-center gap-4 px-4 sm:px-6 lg:px-8 border-b border-base-200 bg-base-100">
+    <div class="h-12 relative z-10 flex items-center gap-2 sm:gap-4 px-3 sm:px-6 lg:px-8 border-b border-base-200 bg-base-100">
       <a href="/" class="flex items-center gap-2 font-semibold text-primary shrink-0">
         <img src={~p"/images/logo.png"} alt="Chatlio" class="h-6 w-auto" />
         <span class="hidden sm:inline">Chatlio</span>
       </a>
-      <ul class="menu menu-horizontal flex-1 items-center gap-2 justify-end p-0">
+
+      <ul class="menu menu-horizontal hidden md:flex flex-1 flex-nowrap items-center gap-2 justify-end p-0 overflow-x-auto">
         <%= if @current_scope do %>
           <li :if={dialogs_visible?(@current_scope)}>
             <.link navigate={~p"/dashboard"}>Диалоги</.link>
@@ -62,7 +63,7 @@
             <.link navigate={~p"/sites"}>Сайты</.link>
           </li>
           <li>
-            <span class="text-sm text-base-content/60">{@current_scope.user.email}</span>
+            <span class="text-sm text-base-content/60 max-w-40 truncate">{@current_scope.user.email}</span>
           </li>
           <li>
             <.link href={~p"/users/settings"}>Настройки</.link>
@@ -82,6 +83,42 @@
           <.theme_toggle />
         </li>
       </ul>
+
+      <div class="flex md:hidden flex-1 items-center justify-end gap-1">
+        <.theme_toggle />
+        <div class="dropdown dropdown-end">
+          <div tabindex="0" role="button" class="btn btn-ghost btn-sm btn-square" aria-label="Меню">
+            <.icon name="hero-bars-3" class="size-5" />
+          </div>
+          <ul
+            tabindex="0"
+            class="menu menu-sm dropdown-content bg-base-100 rounded-box z-20 mt-2 w-56 p-2 shadow border border-base-200"
+          >
+            <%= if @current_scope do %>
+              <li class="menu-title truncate">{@current_scope.user.email}</li>
+              <li :if={dialogs_visible?(@current_scope)}>
+                <.link navigate={~p"/dashboard"}>Диалоги</.link>
+              </li>
+              <li>
+                <.link navigate={~p"/sites"}>Сайты</.link>
+              </li>
+              <li>
+                <.link href={~p"/users/settings"}>Настройки</.link>
+              </li>
+              <li>
+                <.link href={~p"/users/log-out"} method="delete">Выйти</.link>
+              </li>
+            <% else %>
+              <li>
+                <.link href={~p"/users/register"}>Регистрация</.link>
+              </li>
+              <li>
+                <.link href={~p"/users/log-in"}>Вход</.link>
+              </li>
+            <% end %>
+          </ul>
+        </div>
+      </div>
     </div>
     {@inner_content}
   </body>
